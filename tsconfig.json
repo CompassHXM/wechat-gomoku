@@ -16,15 +16,19 @@
     "noUnusedParameters": true,
     "strict": true,
     "strictPropertyInitialization": true,
+    "skipLibCheck": true,
     "lib": ["ES2020"],
     "typeRoots": [
       "./typings"
     ]
   },
   "include": [
-    "./**/*.ts"
+    "miniprogram/**/*.ts",
+    "typings/**/*.d.ts"
   ],
   "exclude": [
-    "node_modules"
+    "node_modules",
+    "backend",
+    "cloudfunctions"
   ]
 }

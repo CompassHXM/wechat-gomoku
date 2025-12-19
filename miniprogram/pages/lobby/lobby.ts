@@ -109,7 +109,6 @@ Page({
   // 加入房间
   async joinRoom(e: any) {
     const roomId = e.currentTarget.dataset.roomId
-    const room = e.currentTarget.dataset.room
 
     if (!this.data.nickname) return
 

@@ -1,5 +1,4 @@
 // websocket.ts - WebSocket连接管理（使用Azure Web PubSub）
-import { config } from './config';
 import { api } from './api';
 
 class WebSocketManager {
