@@ -1,0 +1,26 @@
+version: 2.1
+
+orbs:
+  node: circleci/node@5.1.0
+
+jobs:
+  build-and-deploy:
+    docker:
+      - image: cimg/node:18.0
+    steps:
+      - checkout
+      - node/install-packages:
+          pkg-manager: npm
+      - run:
+          name: Build
+          command: npm run build
+      - run:
+          name: Deploy to Azure
+          command: |
+            # 这里可以添加Azure CLI部署命令
+            echo "Deploying to Azure..."
+
+workflows:
+  build-deploy:
+    jobs:
+      - build-and-deploy

@@ -1,0 +1,51 @@
+// index.ts - 主入口文件
+import express from 'express';
+import cors from 'cors';
+import dotenv from 'dotenv';
+import { initDatabase } from './config/database';
+import routes from './routes';
+
+dotenv.config();
+
+const app = express();
+const PORT = process.env.PORT || 3000;
+
+// 中间件
+app.use(cors({
+  origin: process.env.ALLOWED_ORIGINS?.split(',') || '*',
+  credentials: true
+}));
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+
+// 路由
+app.use(routes);
+
+// 错误处理
+app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
+  console.error('Error:', err);
+  res.status(err.status || 500).json({
+    error: err.message || 'Internal Server Error'
+  });
+});
+
+// 启动服务器
+async function start() {
+  try {
+    // 初始化数据库
+    await initDatabase();
+    console.log('Database initialized successfully');
+
+    // 启动HTTP服务器
+    app.listen(PORT, () => {
+      console.log(`Server is running on port ${PORT}`);
+      console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
+      console.log(`API endpoint: http://localhost:${PORT}/api`);
+    });
+  } catch (error) {
+    console.error('Failed to start server:', error);
+    process.exit(1);
+  }
+}
+
+start();

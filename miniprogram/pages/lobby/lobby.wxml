@@ -1,0 +1,68 @@
+<!--lobby.wxml-->
+<view class="container">
+  <view class="header">
+    <text class="title">五子棋联机大厅</text>
+  </view>
+
+  <!-- 昵称输入 -->
+  <view class="nickname-section" wx:if="{{!nickname}}">
+    <view class="nickname-card">
+      <text class="label">请输入昵称</text>
+      <input 
+        class="nickname-input" 
+        placeholder="请输入您的昵称" 
+        value="{{inputNickname}}"
+        bindinput="onNicknameInput"
+        maxlength="10"
+      />
+      <button class="confirm-btn" bindtap="confirmNickname" disabled="{{!inputNickname}}">
+        确认昵称
+      </button>
+    </view>
+  </view>
+
+  <!-- 房间列表 -->
+  <view class="room-section" wx:else>
+    <view class="user-info">
+      <text class="nickname-display">昵称: {{nickname}}</text>
+    </view>
+
+    <view class="action-buttons">
+      <button class="action-btn create-btn" bindtap="createRoom">创建房间</button>
+      <button class="action-btn refresh-btn" bindtap="refreshRooms">刷新房间</button>
+    </view>
+
+    <view class="room-list">
+      <view class="room-list-header">
+        <text class="list-title">房间列表 ({{rooms.length}})</text>
+      </view>
+
+      <scroll-view class="room-scroll" scroll-y>
+        <block wx:if="{{rooms.length > 0}}">
+          <view 
+            class="room-item" 
+            wx:for="{{rooms}}" 
+            wx:key="_id"
+            bindtap="joinRoom"
+            data-room-id="{{item._id}}"
+            data-room="{{item}}"
+          >
+            <view class="room-info">
+              <text class="room-id">房间 #{{item.roomNumber}}</text>
+              <text class="room-creator">创建者: {{item.creator.nickname}}</text>
+            </view>
+            <view class="room-status">
+              <text class="player-count">{{item.players.length}}/2</text>
+              <text class="status-text">
+                {{item.status === 'waiting' ? '等待中' : item.status === 'playing' ? '游戏中' : '已结束'}}
+              </text>
+            </view>
+          </view>
+        </block>
+        <view class="empty-tip" wx:else>
+          <text>暂无房间，快来创建一个吧！</text>
+        </view>
+      </scroll-view>
+    </view>
+  </view>
+</view>

@@ -1,0 +1,204 @@
+/* lobby.wxss */
+.container {
+  min-height: 100vh;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  padding: 20rpx;
+}
+
+.header {
+  text-align: center;
+  padding: 40rpx 0;
+}
+
+.title {
+  font-size: 48rpx;
+  font-weight: bold;
+  color: white;
+  text-shadow: 2rpx 2rpx 4rpx rgba(0, 0, 0, 0.3);
+}
+
+/* 昵称输入区域 */
+.nickname-section {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 60vh;
+}
+
+.nickname-card {
+  background: white;
+  border-radius: 20rpx;
+  padding: 60rpx 40rpx;
+  width: 600rpx;
+  box-shadow: 0 10rpx 30rpx rgba(0, 0, 0, 0.2);
+}
+
+.label {
+  display: block;
+  font-size: 32rpx;
+  color: #333;
+  margin-bottom: 30rpx;
+  font-weight: bold;
+  text-align: center;
+}
+
+.nickname-input {
+  width: 100%;
+  height: 80rpx;
+  border: 2rpx solid #e0e0e0;
+  border-radius: 10rpx;
+  padding: 0 20rpx;
+  font-size: 28rpx;
+  margin-bottom: 30rpx;
+  box-sizing: border-box;
+}
+
+.confirm-btn {
+  width: 100%;
+  height: 80rpx;
+  line-height: 80rpx;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border-radius: 40rpx;
+  font-size: 32rpx;
+  font-weight: bold;
+  border: none;
+}
+
+.confirm-btn[disabled] {
+  background: #ccc;
+}
+
+/* 房间列表区域 */
+.room-section {
+  display: flex;
+  flex-direction: column;
+  height: calc(100vh - 160rpx);
+}
+
+.user-info {
+  background: white;
+  border-radius: 10rpx;
+  padding: 20rpx 30rpx;
+  margin-bottom: 20rpx;
+}
+
+.nickname-display {
+  font-size: 28rpx;
+  color: #333;
+  font-weight: bold;
+}
+
+.action-buttons {
+  display: flex;
+  gap: 20rpx;
+  margin-bottom: 20rpx;
+}
+
+.action-btn {
+  flex: 1;
+  height: 80rpx;
+  line-height: 80rpx;
+  border-radius: 10rpx;
+  font-size: 28rpx;
+  font-weight: bold;
+  border: none;
+}
+
+.create-btn {
+  background: #07c160;
+  color: white;
+}
+
+.refresh-btn {
+  background: white;
+  color: #667eea;
+}
+
+.room-list {
+  flex: 1;
+  background: white;
+  border-radius: 10rpx;
+  padding: 20rpx;
+  display: flex;
+  flex-direction: column;
+}
+
+.room-list-header {
+  padding-bottom: 20rpx;
+  border-bottom: 2rpx solid #f0f0f0;
+  margin-bottom: 20rpx;
+}
+
+.list-title {
+  font-size: 32rpx;
+  font-weight: bold;
+  color: #333;
+}
+
+.room-scroll {
+  flex: 1;
+  height: 0;
+}
+
+.room-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 30rpx;
+  margin-bottom: 20rpx;
+  background: #f8f8f8;
+  border-radius: 10rpx;
+  border: 2rpx solid #e0e0e0;
+}
+
+.room-item:active {
+  background: #f0f0f0;
+}
+
+.room-info {
+  display: flex;
+  flex-direction: column;
+  gap: 10rpx;
+}
+
+.room-id {
+  font-size: 30rpx;
+  font-weight: bold;
+  color: #333;
+}
+
+.room-creator {
+  font-size: 24rpx;
+  color: #666;
+}
+
+.room-status {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 10rpx;
+}
+
+.player-count {
+  font-size: 28rpx;
+  color: #667eea;
+  font-weight: bold;
+}
+
+.status-text {
+  font-size: 24rpx;
+  padding: 4rpx 12rpx;
+  border-radius: 10rpx;
+  background: #e3f2fd;
+  color: #1976d2;
+}
+
+.empty-tip {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 400rpx;
+  color: #999;
+  font-size: 28rpx;
+}

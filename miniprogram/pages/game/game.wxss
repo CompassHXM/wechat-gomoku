@@ -1,0 +1,146 @@
+/* game.wxss */
+.container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 20rpx;
+  background-color: #f5f5f5;
+  min-height: 100vh;
+}
+
+.game-info {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-bottom: 30rpx;
+  padding: 20rpx;
+  background-color: white;
+  border-radius: 10rpx;
+  box-shadow: 0 2rpx 10rpx rgba(0, 0, 0, 0.1);
+}
+
+.players-info {
+  display: flex;
+  align-items: center;
+  justify-content: space-around;
+  width: 100%;
+  margin-bottom: 15rpx;
+}
+
+.player-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 15rpx 30rpx;
+  border-radius: 10rpx;
+  background-color: #f8f8f8;
+  min-width: 200rpx;
+  transition: all 0.3s;
+}
+
+.player-card.active {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  transform: scale(1.05);
+  box-shadow: 0 4rpx 15rpx rgba(102, 126, 234, 0.4);
+}
+
+.player-color {
+  width: 40rpx;
+  height: 40rpx;
+  border-radius: 50%;
+  margin-bottom: 10rpx;
+  border: 2rpx solid #ddd;
+}
+
+.player-color.black {
+  background-color: #000;
+}
+
+.player-color.white {
+  background-color: #fff;
+}
+
+.player-card.active .player-color {
+  border-color: white;
+  box-shadow: 0 0 10rpx rgba(255, 255, 255, 0.5);
+}
+
+.player-nickname {
+  font-size: 26rpx;
+  color: #333;
+  font-weight: bold;
+}
+
+.player-card.active .player-nickname {
+  color: white;
+}
+
+.vs-text {
+  font-size: 28rpx;
+  color: #999;
+  font-weight: bold;
+}
+
+.current-player {
+  font-size: 32rpx;
+  font-weight: bold;
+  color: #333;
+  margin-bottom: 10rpx;
+}
+
+.game-status {
+  font-size: 28rpx;
+  color: #666;
+  min-height: 40rpx;
+}
+
+.spectator-tip {
+  margin-top: 10rpx;
+  padding: 8rpx 20rpx;
+  background: #fff3cd;
+  border-radius: 20rpx;
+  border: 1rpx solid #ffc107;
+}
+
+.spectator-tip text {
+  font-size: 24rpx;
+  color: #856404;
+}
+
+.game-canvas {
+  width: 690rpx;
+  height: 690rpx;
+  background-color: #dcb35c;
+  border-radius: 10rpx;
+  box-shadow: 0 4rpx 20rpx rgba(0, 0, 0, 0.15);
+}
+
+.button-group {
+  display: flex;
+  justify-content: space-around;
+  width: 100%;
+  margin-top: 30rpx;
+  gap: 20rpx;
+}
+
+.game-button {
+  flex: 1;
+  height: 80rpx;
+  line-height: 80rpx;
+  padding: 0;
+  font-size: 30rpx;
+  border-radius: 40rpx;
+  background-color: #07c160;
+  color: white;
+  border: none;
+}
+
+.game-button.back-btn {
+  background-color: #667eea;
+}
+
+.game-button[disabled] {
+  background-color: #c0c0c0;
+  color: #666;
+}

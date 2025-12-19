@@ -1,0 +1,41 @@
+<!--game.wxml-->
+<view class="container">
+  <view class="game-info">
+    <!-- 在线模式显示玩家信息 -->
+    <view class="players-info" wx:if="{{isOnline}}">
+      <view class="player-card {{currentPlayer === 1 ? 'active' : ''}}">
+        <view class="player-color black"></view>
+        <text class="player-nickname">{{blackPlayer}}</text>
+      </view>
+      <view class="vs-text">VS</view>
+      <view class="player-card {{currentPlayer === 2 ? 'active' : ''}}">
+        <view class="player-color white"></view>
+        <text class="player-nickname">{{whitePlayer}}</text>
+      </view>
+    </view>
+    
+    <!-- 离线模式显示当前玩家 -->
+    <text class="current-player" wx:else>当前玩家: {{currentPlayer === 1 ? '黑子' : '白子'}}</text>
+    
+    <view class="game-status">{{gameStatus}}</view>
+    
+    <!-- 旁观者提示 -->
+    <view class="spectator-tip" wx:if="{{isSpectator}}">
+      <text>旁观模式</text>
+    </view>
+  </view>
+  
+  <canvas 
+    type="2d"
+    id="gomoku"
+    class="game-canvas"
+    bindtouchstart="handleTap"
+    disable-scroll="true"
+  ></canvas>
+  
+  <view class="button-group">
+    <button class="game-button" bindtap="restartGame" wx:if="{{!isOnline}}">重新开始</button>
+    <button class="game-button" bindtap="undoMove" disabled="{{moveHistory.length === 0 || isOnline}}" wx:if="{{!isOnline}}">悔棋</button>
+    <button class="game-button back-btn" bindtap="backToLobby" wx:if="{{isOnline}}">返回大厅</button>
+  </view>
+</view>
