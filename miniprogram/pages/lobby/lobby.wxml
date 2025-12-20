@@ -42,9 +42,9 @@
           <view 
             class="room-item" 
             wx:for="{{rooms}}" 
-            wx:key="_id"
+            wx:key="id"
             bindtap="joinRoom"
-            data-room-id="{{item._id}}"
+            data-room-id="{{item.id}}"
             data-room="{{item}}"
           >
             <view class="room-info">

@@ -1,7 +1,10 @@
 {
-  "name": "wuziqi-backend",
+  "name": "gomoku-backend",
   "version": "1.0.0",
-  "description": "五子棋游戏后端API - Azure版本",
+  "description": "五子棋游戏后端API - Azure版本 (v1.1)",
+  "engines": {
+    "node": ">=18.0.0"
+  },
   "main": "dist/index.js",
   "scripts": {
     "start": "node dist/index.js",

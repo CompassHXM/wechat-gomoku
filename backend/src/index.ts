@@ -18,8 +18,26 @@ app.use(cors({
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
+// 请求日志中间件
+app.use((req, res, next) => {
+  console.log(`[${new Date().toISOString()}] ${req.method} ${req.url}`);
+  next();
+});
+
+// 健康检查根路由
+app.get('/', (req, res) => {
+  res.send('Gomoku Backend is running!');
+});
+
 // 路由
+console.log('Mounting routes...');
 app.use(routes);
+
+// 404 处理 (放在所有路由之后)
+app.use('*', (req, res) => {
+  console.log(`404 Not Found: ${req.originalUrl}`);
+  res.status(404).json({ error: `Route not found: ${req.originalUrl}` });
+});
 
 // 错误处理
 app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {

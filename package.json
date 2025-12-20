@@ -7,6 +7,7 @@
   "author": "",
   "license": "",
   "devDependencies": {
+    "@types/node": "^25.0.3",
     "miniprogram-api-typings": "^2.8.3-1",
     "typescript": "^5.9.3"
   }

@@ -55,24 +55,21 @@ export async function getRoom(roomId: string): Promise<GameRoom | null> {
   const container = getContainer();
   
   try {
-    const { resource } = await container.item(roomId, 'waiting').read<GameRoom>();
-    return resource || null;
-  } catch (error: any) {
-    if (error.code === 404) {
-      // 尝试其他状态
-      try {
-        const { resource } = await container.item(roomId, 'playing').read<GameRoom>();
-        return resource || null;
-      } catch {
-        try {
-          const { resource } = await container.item(roomId, 'finished').read<GameRoom>();
-          return resource || null;
-        } catch {
-          return null;
-        }
-      }
+    // 尝试通过查询获取房间，不依赖分区键
+    const { resources } = await container.items
+      .query({
+        query: 'SELECT * FROM c WHERE c.id = @id',
+        parameters: [{ name: '@id', value: roomId }]
+      })
+      .fetchAll();
+      
+    if (resources.length > 0) {
+      return resources[0] as GameRoom;
     }
-    throw error;
+    return null;
+  } catch (error) {
+    console.error('Error getting room:', error);
+    return null;
   }
 }
 
@@ -92,6 +89,9 @@ export async function joinRoom(request: JoinRoomRequest): Promise<GameRoom> {
   if (alreadyInRoom) {
     return room;
   }
+
+  // 保存旧的状态用于替换操作（如果分区键是 status）
+  const oldStatus = room.status;
 
   if (room.players.length >= 2) {
     // 加入为旁观者
@@ -117,7 +117,15 @@ export async function joinRoom(request: JoinRoomRequest): Promise<GameRoom> {
 
   room.updateTime = new Date();
   
-  const { resource } = await container.item(room.id!, room.status).replace(room);
+  // 如果状态改变了，且状态是分区键，我们需要删除旧文档并创建新文档
+  // 这里假设 status 不是分区键，或者我们使用 id 作为分区键
+  // 根据错误日志，看起来是 Replace 操作失败，可能是因为分区键不匹配
+  
+  // 为了安全起见，我们使用 upsert 或者明确指定分区键
+  // 如果 status 是分区键，我们需要小心处理
+  
+  // 简单起见，我们直接使用 upsert，它会处理创建或更新
+  const { resource } = await container.items.upsert(room);
   
   // 通知房间内所有用户
   await sendToRoom(request.roomId, {

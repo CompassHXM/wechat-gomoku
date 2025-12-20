@@ -5,7 +5,7 @@ import dotenv from 'dotenv';
 dotenv.config();
 
 const connectionString = process.env.PUBSUB_CONNECTION_STRING!;
-const hubName = process.env.PUBSUB_HUB_NAME || 'wuziqi';
+const hubName = process.env.PUBSUB_HUB_NAME || 'gomoku';
 
 // 创建PubSub客户端
 const serviceClient = new WebPubSubServiceClient(connectionString, hubName);
@@ -28,9 +28,8 @@ export async function getClientAccessToken(userId: string, roomId?: string) {
 // 向房间发送消息
 export async function sendToRoom(roomId: string, message: any) {
   try {
-    await serviceClient.sendToGroup(roomId, message, {
-      contentType: 'application/json'
-    });
+    // 发送 JSON 对象时，不需要指定 contentType，SDK 会自动处理
+    await serviceClient.group(roomId).sendToAll(message);
   } catch (error) {
     console.error('Failed to send message to room:', error);
     throw error;
@@ -40,7 +39,7 @@ export async function sendToRoom(roomId: string, message: any) {
 // 将用户添加到房间组
 export async function addUserToRoom(userId: string, roomId: string) {
   try {
-    await serviceClient.addUserToGroup(roomId, userId);
+    await serviceClient.group(roomId).addUser(userId);
   } catch (error) {
     console.error('Failed to add user to room:', error);
     throw error;
@@ -50,7 +49,7 @@ export async function addUserToRoom(userId: string, roomId: string) {
 // 从房间组移除用户
 export async function removeUserFromRoom(userId: string, roomId: string) {
   try {
-    await serviceClient.removeUserFromGroup(roomId, userId);
+    await serviceClient.group(roomId).removeUser(userId);
   } catch (error) {
     console.error('Failed to remove user from room:', error);
   }

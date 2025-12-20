@@ -23,12 +23,12 @@
 ```bash
 # 使用Azure CLI（推荐）
 az login
-az group create --name wuziqi-rg --location eastasia
+az group create --name gomoku-rg --location eastasia
 ```
 
 或在Azure Portal中：
 1. 搜索"资源组" → 点击"创建"
-2. 资源组名称：`wuziqi-rg`
+2. 资源组名称：`gomoku-rg`
 3. 区域：选择"东亚"或"东南亚"（距离中国近）
 
 ### 3. 创建Azure Cosmos DB
@@ -38,7 +38,7 @@ az group create --name wuziqi-rg --location eastasia
 1. 搜索"Azure Cosmos DB" → 点击"创建"
 2. 选择API：**Core (SQL)**
 3. 填写信息：
-   - 账户名：`wuziqi-cosmos-db`（全局唯一）
+   - 账户名：`gomoku-cosmos-db`（全局唯一）
    - 位置：东亚
    - 容量模式：**无服务器**（推荐，按使用量付费）
 4. 点击"查看 + 创建" → "创建"
@@ -47,8 +47,8 @@ az group create --name wuziqi-rg --location eastasia
 
 ```bash
 az cosmosdb create \
-  --name wuziqi-cosmos-db \
-  --resource-group wuziqi-rg \
+  --name gomoku-cosmos-db \
+  --resource-group gomoku-rg \
   --locations regionName=eastasia \
   --capabilities EnableServerless
 ```
@@ -58,7 +58,7 @@ az cosmosdb create \
 创建完成后，在Cosmos DB页面：
 1. 左侧菜单 → "密钥"
 2. 复制：
-   - **URI**（例如：`https://wuziqi-cosmos-db.documents.azure.com:443/`）
+   - **URI**（例如：`https://gomoku-cosmos-db.documents.azure.com:443/`）
    - **主密钥**
 
 ### 4. 创建Azure Web PubSub
@@ -67,7 +67,7 @@ az cosmosdb create \
 
 1. 搜索"Web PubSub" → 点击"创建"
 2. 填写信息：
-   - 资源名称：`wuziqi-pubsub`
+   - 资源名称：`gomoku-pubsub`
    - 区域：东亚
    - 定价层：**免费层**（支持20个并发连接，足够测试）
 3. 点击"查看 + 创建" → "创建"
@@ -76,8 +76,8 @@ az cosmosdb create \
 
 ```bash
 az webpubsub create \
-  --name wuziqi-pubsub \
-  --resource-group wuziqi-rg \
+  --name gomoku-pubsub \
+  --resource-group gomoku-rg \
   --location eastasia \
   --sku Free_F1
 ```
@@ -87,7 +87,7 @@ az webpubsub create \
 创建完成后：
 1. 左侧菜单 → "密钥"
 2. 复制**连接字符串**（主密钥）
-   - 格式：`Endpoint=https://wuziqi-pubsub.webpubsub.azure.com;AccessKey=...;Version=1.0;`
+   - 格式：`Endpoint=https://gomoku-pubsub.webpubsub.azure.com;AccessKey=...;Version=1.0;`
 
 ---
 
@@ -101,7 +101,7 @@ az webpubsub create \
 
 1. 搜索"应用服务" → 点击"创建"
 2. 填写信息：
-   - 应用名称：`wuziqi-api`（全局唯一，会生成URL: wuziqi-api.azurewebsites.net）
+   - 应用名称：`gomoku-api`（全局唯一，会生成URL: gomoku-api.azurewebsites.net）
    - 运行时堆栈：**Node 18 LTS**
    - 操作系统：Linux
    - 定价计划：**F1（免费）**或 **B1（基本）**
@@ -112,16 +112,16 @@ az webpubsub create \
 ```bash
 # 创建App Service Plan
 az appservice plan create \
-  --name wuziqi-plan \
-  --resource-group wuziqi-rg \
+  --name gomoku-plan \
+  --resource-group gomoku-rg \
   --sku F1 \
   --is-linux
 
 # 创建Web App
 az webapp create \
-  --name wuziqi-api \
-  --resource-group wuziqi-rg \
-  --plan wuziqi-plan \
+  --name gomoku-api \
+  --resource-group gomoku-rg \
+  --plan gomoku-plan \
   --runtime "NODE:18-lts"
 ```
 
@@ -132,13 +132,13 @@ az webapp create \
 2. 添加以下配置：
 
 ```
-COSMOS_ENDPOINT=https://wuziqi-cosmos-db.documents.azure.com:443/
+COSMOS_ENDPOINT=https://gomoku-cosmos-db.documents.azure.com:443/
 COSMOS_KEY=你的Cosmos DB主密钥
-COSMOS_DATABASE=wuziqi
+COSMOS_DATABASE=gomoku
 COSMOS_CONTAINER=game_rooms
 
 PUBSUB_CONNECTION_STRING=你的PubSub连接字符串
-PUBSUB_HUB_NAME=wuziqi
+PUBSUB_HUB_NAME=gomoku
 
 PORT=8080
 NODE_ENV=production
@@ -162,8 +162,8 @@ zip -r deploy.zip package.json package-lock.json dist/
 
 # 部署到Azure
 az webapp deployment source config-zip \
-  --resource-group wuziqi-rg \
-  --name wuziqi-api \
+  --resource-group gomoku-rg \
+  --name gomoku-api \
   --src deploy.zip
 ```
 
@@ -173,7 +173,7 @@ az webapp deployment source config-zip \
 2. 在VS Code中：
    - 按 `Ctrl+Shift+P`
    - 输入 `Azure App Service: Deploy to Web App`
-   - 选择 `wuziqi-api`
+   - 选择 `gomoku-api`
    - 选择 `backend` 目录
 
 **方法C：使用GitHub Actions（自动化）**
@@ -187,7 +187,7 @@ az webapp deployment source config-zip \
 
 #### 4. 验证部署
 
-访问：`https://wuziqi-api.azurewebsites.net/api/health`
+访问：`https://gomoku-api.azurewebsites.net/api/health`
 
 应该返回：
 ```json
@@ -205,10 +205,10 @@ az webapp deployment source config-zip \
 cd backend
 
 # 构建镜像
-docker build -t wuziqi-backend .
+docker build -t gomoku-backend .
 
 # 标记镜像
-docker tag wuziqi-backend wuziqi.azurecr.io/wuziqi-backend:latest
+docker tag gomoku-backend gomoku.azurecr.io/gomoku-backend:latest
 ```
 
 #### 2. 推送到Azure Container Registry
@@ -216,25 +216,25 @@ docker tag wuziqi-backend wuziqi.azurecr.io/wuziqi-backend:latest
 ```bash
 # 创建容器注册表
 az acr create \
-  --name wuziqi \
-  --resource-group wuziqi-rg \
+  --name gomoku \
+  --resource-group gomoku-rg \
   --sku Basic
 
 # 登录
-az acr login --name wuziqi
+az acr login --name gomoku
 
 # 推送镜像
-docker push wuziqi.azurecr.io/wuziqi-backend:latest
+docker push gomoku.azurecr.io/gomoku-backend:latest
 ```
 
 #### 3. 部署到Container Instances
 
 ```bash
 az container create \
-  --name wuziqi-backend \
-  --resource-group wuziqi-rg \
-  --image wuziqi.azurecr.io/wuziqi-backend:latest \
-  --dns-name-label wuziqi-api \
+  --name gomoku-backend \
+  --resource-group gomoku-rg \
+  --image gomoku.azurecr.io/gomoku-backend:latest \
+  --dns-name-label gomoku-api \
   --ports 3000 \
   --environment-variables \
     COSMOS_ENDPOINT="..." \
@@ -260,12 +260,12 @@ az container create \
 
 **request合法域名：**
 ```
-https://wuziqi-api.azurewebsites.net
+https://gomoku-api.azurewebsites.net
 ```
 
 **socket合法域名：**
 ```
-wss://wuziqi-pubsub.webpubsub.azure.com
+wss://gomoku-pubsub.webpubsub.azure.com
 ```
 
 ### 2. 修改小程序配置
@@ -273,8 +273,8 @@ wss://wuziqi-pubsub.webpubsub.azure.com
 编辑 `miniprogram/utils/config.ts`：
 
 ```typescript
-export const API_BASE_URL = 'https://wuziqi-api.azurewebsites.net';
-export const PUBSUB_URL = 'wss://wuziqi-pubsub.webpubsub.azure.com/client/hubs/wuziqi';
+export const API_BASE_URL = 'https://gomoku-api.azurewebsites.net';
+export const PUBSUB_URL = 'wss://gomoku-pubsub.webpubsub.azure.com/client/hubs/gomoku';
 ```
 
 ### 3. 编译上传
@@ -307,15 +307,15 @@ export const config = isDev ? DEV_CONFIG : {
 
 ```bash
 # 健康检查
-curl https://wuziqi-api.azurewebsites.net/api/health
+curl https://gomoku-api.azurewebsites.net/api/health
 
 # 创建房间
-curl -X POST https://wuziqi-api.azurewebsites.net/api/rooms/create \
+curl -X POST https://gomoku-api.azurewebsites.net/api/rooms/create \
   -H "Content-Type: application/json" \
   -d '{"userId": "test123", "nickname": "测试玩家"}'
 
 # 获取房间列表
-curl https://wuziqi-api.azurewebsites.net/api/rooms
+curl https://gomoku-api.azurewebsites.net/api/rooms
 ```
 
 ### 2. WebSocket测试
@@ -324,7 +324,7 @@ curl https://wuziqi-api.azurewebsites.net/api/rooms
 
 ```javascript
 // 先获取token
-const response = await fetch('https://wuziqi-api.azurewebsites.net/api/auth/token', {
+const response = await fetch('https://gomoku-api.azurewebsites.net/api/auth/token', {
   method: 'POST',
   headers: { 'Content-Type': 'application/json' },
   body: JSON.stringify({ userId: 'test123', roomId: 'room456' })
@@ -403,8 +403,8 @@ Azure Portal → App Service → 日志流
 
 ```bash
 az monitor app-insights component create \
-  --app wuziqi-insights \
-  --resource-group wuziqi-rg \
+  --app gomoku-insights \
+  --resource-group gomoku-rg \
   --location eastasia
 ```
 
