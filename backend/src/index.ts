@@ -10,12 +10,25 @@ dotenv.config();
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+// 特殊处理 Azure Web PubSub 的握手请求 (必须在 CORS 中间件之前)
+app.options('/api/webpubsub/event', (req, res) => {
+  if (req.headers['webhook-request-origin']) {
+    res.setHeader('Webhook-Allowed-Origin', '*');
+    res.status(200).send();
+  } else {
+    res.status(200).send();
+  }
+});
+
 // 中间件
 app.use(cors({
   origin: process.env.ALLOWED_ORIGINS?.split(',') || '*',
   credentials: true
 }));
-app.use(express.json());
+// 支持解析 CloudEvents 内容类型
+app.use(express.json({ 
+  type: ['application/json', 'application/cloudevents+json'] 
+}));
 app.use(express.urlencoded({ extended: true }));
 
 // 请求日志中间件

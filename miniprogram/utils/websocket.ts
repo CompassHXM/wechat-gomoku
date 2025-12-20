@@ -19,9 +19,33 @@ class WebSocketManager {
       // 获取连接令牌
       const tokenData = await api.getToken(userId, roomId);
       
+      // 解析URL和Token
+      // Azure SDK返回的URL包含access_token参数
+      // 我们尝试将token放入header中，以避免URL过长或编码问题
+      const urlObj = tokenData.url.split('?');
+      const baseUrl = urlObj[0];
+      const params = urlObj[1];
+      let token = '';
+      
+      if (params) {
+        const searchParams = params.split('&');
+        for (const param of searchParams) {
+          const parts = param.split('=');
+          const key = parts[0];
+          const value = parts[1];
+          if (key === 'access_token') {
+            token = value;
+            break;
+          }
+        }
+      }
+
       // 创建WebSocket连接
+      console.log('Connecting to WebSocket...', tokenData.url);
       this.socket = wx.connectSocket({
         url: tokenData.url,
+        // protocols: ['json.webpubsub.azure.v1'], // 暂时移除子协议，尝试解决 Invalid HTTP status
+        perMessageDeflate: false,
         fail: (err) => {
           console.error('WebSocket连接失败:', err);
         }

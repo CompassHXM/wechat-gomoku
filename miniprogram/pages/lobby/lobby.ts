@@ -120,7 +120,7 @@ Page({
       wx.hideLoading()
       
       // 检查是否是旁观者
-      const isSpectator = updatedRoom.spectators?.some((s: any) => s.userId === this.data.userId)
+      const isSpectator = updatedRoom.spectators && updatedRoom.spectators.some((s: any) => s.userId === this.data.userId)
       
       if (isSpectator) {
         wx.showToast({

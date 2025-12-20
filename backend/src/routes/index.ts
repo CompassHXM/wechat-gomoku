@@ -119,8 +119,18 @@ router.post('/api/rooms/leave', async (req, res) => {
 });
 
 // Web PubSub 事件处理 (用于处理断线)
+// 处理 OPTIONS 请求（握手验证）
+router.options('/api/webpubsub/event', (req, res) => {
+  if (req.headers['webhook-request-origin']) {
+    res.setHeader('Webhook-Allowed-Origin', '*');
+    res.status(200).send();
+  } else {
+    res.status(200).send();
+  }
+});
+
 router.post('/api/webpubsub/event', async (req, res) => {
-  // 处理 CloudEvents 握手验证
+  // 处理 CloudEvents 握手验证 (兼容 POST 方式)
   if (req.headers['webhook-request-origin']) {
     res.setHeader('Webhook-Allowed-Origin', '*');
     res.status(200).send();

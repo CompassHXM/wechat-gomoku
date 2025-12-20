@@ -174,6 +174,9 @@ export async function makeMove(request: MakeMoveRequest): Promise<GameRoom> {
     throw new Error('Game is not in playing status');
   }
 
+  // 保存旧的状态用于替换操作（如果分区键是 status）
+  const oldStatus = room.status;
+
   // 验证是否是当前玩家
   const currentPlayerObj = room.players.find(p => p.color === room.currentPlayer);
   if (!currentPlayerObj || currentPlayerObj.userId !== request.userId) {
@@ -211,7 +214,22 @@ export async function makeMove(request: MakeMoveRequest): Promise<GameRoom> {
 
   room.updateTime = new Date();
   
-  const { resource } = await container.item(room.id!, room.status).replace(room);
+  let resource: GameRoom;
+
+  // 如果状态改变了，且状态是分区键，我们需要删除旧文档并创建新文档
+  if (oldStatus !== room.status) {
+    // 状态改变了，因为分区键是 /status，我们必须先删除旧文档，再创建新文档
+    // 1. 删除旧文档 (使用旧状态作为分区键)
+    await container.item(room.id!, oldStatus).delete();
+    
+    // 2. 创建新文档 (使用新状态)
+    const createResponse = await container.items.create(room);
+    resource = createResponse.resource as GameRoom;
+  } else {
+    // 状态没变，可以直接使用 replace
+    const replaceResponse = await container.item(room.id!, room.status).replace(room);
+    resource = replaceResponse.resource as GameRoom;
+  }
   
   console.log(`Sending game update to room ${request.roomId} for move at ${request.row},${request.col}`);
   
@@ -221,7 +239,7 @@ export async function makeMove(request: MakeMoveRequest): Promise<GameRoom> {
     data: resource
   });
   
-  return resource as GameRoom;
+  return resource;
 }
 
 // 检查获胜

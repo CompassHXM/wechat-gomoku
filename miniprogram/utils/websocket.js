@@ -20,9 +20,29 @@ class WebSocketManager {
         try {
             // 获取连接令牌
             const tokenData = await api_1.api.getToken(userId, roomId);
+            // 解析URL和Token
+            const urlObj = tokenData.url.split('?');
+            const baseUrl = urlObj[0];
+            const params = urlObj[1];
+            let token = '';
+            if (params) {
+                const searchParams = params.split('&');
+                for (const param of searchParams) {
+                    const parts = param.split('=');
+                    const key = parts[0];
+                    const value = parts[1];
+                    if (key === 'access_token') {
+                        token = value;
+                        break;
+                    }
+                }
+            }
             // 创建WebSocket连接
+            console.log('Connecting to WebSocket...', tokenData.url);
             this.socket = wx.connectSocket({
                 url: tokenData.url,
+                // protocols: ['json.webpubsub.azure.v1'],
+                perMessageDeflate: false,
                 fail: (err) => {
                     console.error('WebSocket连接失败:', err);
                 }

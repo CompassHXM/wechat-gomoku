@@ -105,7 +105,7 @@ Page({
             const updatedRoom = await api_1.api.joinRoom(this.data.userId, this.data.nickname, roomId);
             wx.hideLoading();
             // 检查是否是旁观者
-            const isSpectator = updatedRoom.spectators?.some((s) => s.userId === this.data.userId);
+            const isSpectator = updatedRoom.spectators && updatedRoom.spectators.some((s) => s.userId === this.data.userId);
             if (isSpectator) {
                 wx.showToast({
                     title: '以旁观者身份加入',
