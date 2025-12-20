@@ -43,6 +43,12 @@ Page({
   onUnload() {
     // 页面卸载时关闭WebSocket连接
     if (this.data.isOnline) {
+      // 离开房间
+      if (this.data.roomId && this.data.myUserId) {
+        api.leaveRoom(this.data.myUserId, this.data.roomId).catch(err => {
+          console.error('Failed to leave room:', err);
+        });
+      }
       wsManager.disconnect()
     }
   },
@@ -565,11 +571,6 @@ Page({
   },
 
   backToLobby() {
-    // 关闭WebSocket连接
-    if (this.data.isOnline) {
-      wsManager.disconnect()
-    }
-    
     wx.navigateBack({
       fail: () => {
         wx.redirectTo({

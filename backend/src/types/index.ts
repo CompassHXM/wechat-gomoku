@@ -53,3 +53,8 @@ export interface MakeMoveRequest {
   row: number;
   col: number;
 }
+
+export interface LeaveRoomRequest {
+  userId: string;
+  roomId: string;
+}

@@ -1,11 +1,17 @@
 // roomService.ts - 房间管理服务
 import { getContainer } from '../config/database';
-import { sendToRoom } from '../config/pubsub';
-import { GameRoom, CreateRoomRequest, JoinRoomRequest, MakeMoveRequest, Move } from '../types';
+import { sendToRoom, removeUserFromRoom } from '../config/pubsub';
+import { GameRoom, CreateRoomRequest, JoinRoomRequest, MakeMoveRequest, Move, LeaveRoomRequest } from '../types';
 import { v4 as uuidv4 } from 'uuid';
 
 // 创建房间
 export async function createRoom(request: CreateRoomRequest): Promise<GameRoom> {
+  // 检查用户是否已在其他房间
+  const existingRoom = await findRoomByUserId(request.userId);
+  if (existingRoom) {
+    await leaveRoom({ userId: request.userId, roomId: existingRoom.id! });
+  }
+
   const container = getContainer();
   
   const roomNumber = Math.floor(1000 + Math.random() * 9000);
@@ -75,6 +81,12 @@ export async function getRoom(roomId: string): Promise<GameRoom | null> {
 
 // 加入房间
 export async function joinRoom(request: JoinRoomRequest): Promise<GameRoom> {
+  // 检查用户是否已在其他房间
+  const existingRoom = await findRoomByUserId(request.userId);
+  if (existingRoom && existingRoom.id !== request.roomId) {
+     await leaveRoom({ userId: request.userId, roomId: existingRoom.id! });
+  }
+
   const container = getContainer();
   const room = await getRoom(request.roomId);
   
@@ -118,22 +130,35 @@ export async function joinRoom(request: JoinRoomRequest): Promise<GameRoom> {
   room.updateTime = new Date();
   
   // 如果状态改变了，且状态是分区键，我们需要删除旧文档并创建新文档
-  // 这里假设 status 不是分区键，或者我们使用 id 作为分区键
-  // 根据错误日志，看起来是 Replace 操作失败，可能是因为分区键不匹配
-  
-  // 为了安全起见，我们使用 upsert 或者明确指定分区键
-  // 如果 status 是分区键，我们需要小心处理
-  
-  // 简单起见，我们直接使用 upsert，它会处理创建或更新
-  const { resource } = await container.items.upsert(room);
-  
-  // 通知房间内所有用户
-  await sendToRoom(request.roomId, {
-    type: 'room_update',
-    data: resource
-  });
-  
-  return resource as GameRoom;
+  // 检查状态是否发生变化
+  if (oldStatus !== room.status) {
+    // 状态改变了，因为分区键是 /status，我们必须先删除旧文档，再创建新文档
+    // 1. 删除旧文档 (使用旧状态作为分区键)
+    await container.item(room.id!, oldStatus).delete();
+    
+    // 2. 创建新文档 (使用新状态)
+    const { resource } = await container.items.create(room);
+    
+    // 通知房间内所有用户
+    await sendToRoom(request.roomId, {
+      type: 'room_update',
+      data: resource
+    });
+    
+    return resource as GameRoom;
+  } else {
+    // 状态没变，可以直接使用 replace 或 upsert
+    // 显式指定分区键，确保操作正确
+    const { resource } = await container.item(room.id!, room.status).replace(room);
+    
+    // 通知房间内所有用户
+    await sendToRoom(request.roomId, {
+      type: 'room_update',
+      data: resource
+    });
+    
+    return resource as GameRoom;
+  }
 }
 
 // 下棋
@@ -187,6 +212,8 @@ export async function makeMove(request: MakeMoveRequest): Promise<GameRoom> {
   room.updateTime = new Date();
   
   const { resource } = await container.item(room.id!, room.status).replace(room);
+  
+  console.log(`Sending game update to room ${request.roomId} for move at ${request.row},${request.col}`);
   
   // 通知房间内所有用户
   await sendToRoom(request.roomId, {
@@ -258,4 +285,118 @@ function checkDraw(board: number[][]): boolean {
     }
   }
   return true;
+}
+
+// 根据用户ID查找房间
+export async function findRoomByUserId(userId: string): Promise<GameRoom | null> {
+  const container = getContainer();
+  // 查询用户是否在 players 或 spectators 中
+  const query = `
+    SELECT * FROM c 
+    WHERE EXISTS(SELECT VALUE p FROM p IN c.players WHERE p.userId = @userId) 
+    OR EXISTS(SELECT VALUE s FROM s IN c.spectators WHERE s.userId = @userId)
+  `;
+  
+  const { resources } = await container.items
+    .query({
+      query,
+      parameters: [{ name: '@userId', value: userId }]
+    })
+    .fetchAll();
+    
+  if (resources.length > 0) {
+    return resources[0] as GameRoom;
+  }
+  return null;
+}
+
+// 删除房间
+export async function deleteRoom(roomId: string, status: string): Promise<void> {
+  const container = getContainer();
+  try {
+    await container.item(roomId, status).delete();
+  } catch (error) {
+    console.error(`Failed to delete room ${roomId}:`, error);
+  }
+}
+
+// 离开房间
+export async function leaveRoom(request: LeaveRoomRequest): Promise<void> {
+  const container = getContainer();
+  let room = await getRoom(request.roomId);
+  
+  if (!room) {
+    // 尝试通过 userId 查找，如果 roomId 不准确
+    room = await findRoomByUserId(request.userId);
+    if (!room) return; // 房间不存在或用户不在房间
+  }
+
+  // 检查用户是否在房间
+  const playerIndex = room.players.findIndex(p => p.userId === request.userId);
+  const spectatorIndex = room.spectators.findIndex(s => s.userId === request.userId);
+
+  if (playerIndex === -1 && spectatorIndex === -1) {
+    return; // 用户不在房间
+  }
+
+  const oldStatus = room.status;
+  let shouldDelete = false;
+
+  // 移除用户
+  if (playerIndex !== -1) {
+    room.players.splice(playerIndex, 1);
+  } else if (spectatorIndex !== -1) {
+    room.spectators.splice(spectatorIndex, 1);
+  }
+
+  // 从 PubSub 组移除
+  await removeUserFromRoom(request.userId, room.id!);
+
+  // 检查是否需要删除房间
+  // 需求：当房间没有对战玩家时，将房间删除，并且同时将所有旁观者踢出房间
+  if (room.players.length === 0) {
+    shouldDelete = true;
+  }
+
+  if (shouldDelete) {
+    // 踢出所有旁观者
+    for (const spectator of room.spectators) {
+       await removeUserFromRoom(spectator.userId, room.id!);
+    }
+    
+    // 通知房间即将销毁
+    await sendToRoom(room.id!, {
+      type: 'room_deleted',
+      roomId: room.id
+    });
+
+    // 删除房间
+    await deleteRoom(room.id!, oldStatus);
+  } else {
+    // 如果玩家离开导致状态变化
+    if (room.status === 'playing' && room.players.length < 2) {
+       room.status = 'waiting'; 
+       // 重置游戏盘面
+       room.board = Array(15).fill(null).map(() => Array(15).fill(0));
+       room.moveHistory = [];
+       room.currentPlayer = 1;
+       room.winner = null;
+       // 剩下的玩家重置
+       if (room.players[0]) {
+         room.players[0].color = 1;
+         room.players[0].isReady = true;
+       }
+    }
+
+    room.updateTime = new Date();
+
+    if (oldStatus !== room.status) {
+      await container.item(room.id!, oldStatus).delete();
+      const { resource } = await container.items.create(room);
+      await sendToRoom(room.id!, { type: 'room_update', data: resource });
+    } else {
+      const { resource } = await container.item(room.id!, room.status).replace(room);
+      await sendToRoom(room.id!, { type: 'room_update', data: resource });
+    }
+  }
 }

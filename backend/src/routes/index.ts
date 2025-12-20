@@ -1,7 +1,7 @@
 // routes.ts - API路由
 import { Router } from 'express';
 import * as roomService from '../services/roomService';
-import { getClientAccessToken } from '../config/pubsub';
+import { getClientAccessToken, addUserToRoom } from '../config/pubsub';
 
 const router = Router();
 
@@ -99,6 +99,72 @@ router.post('/api/rooms/move', async (req, res) => {
     console.error('Error making move:', error);
     res.status(500).json({ error: error.message });
   }
+});
+
+// 离开房间
+router.post('/api/rooms/leave', async (req, res) => {
+  try {
+    const { userId, roomId } = req.body;
+    
+    if (!userId || !roomId) {
+      return res.status(400).json({ error: 'userId and roomId are required' });
+    }
+
+    await roomService.leaveRoom({ userId, roomId });
+    res.json({ success: true });
+  } catch (error: any) {
+    console.error('Error leaving room:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Web PubSub 事件处理 (用于处理断线)
+router.post('/api/webpubsub/event', async (req, res) => {
+  // 处理 CloudEvents 握手验证
+  if (req.headers['webhook-request-origin']) {
+    res.setHeader('Webhook-Allowed-Origin', '*');
+    res.status(200).send();
+    return;
+  }
+
+  const eventType = req.headers['ce-type'];
+  const userId = req.headers['ce-userid'] as string;
+  const eventName = req.headers['ce-eventname'];
+  const connectionId = req.headers['ce-connectionid'];
+
+  console.log(`[WebPubSub] Event: ${eventType}, User: ${userId}, Connection: ${connectionId}`);
+
+  if (eventType === 'azure.webpubsub.sys.connect') {
+    // 允许连接
+    res.status(200).send();
+    return;
+  }
+  
+  if (eventType === 'azure.webpubsub.sys.disconnected') {
+    console.log(`User disconnected: ${userId}`);
+    if (userId) {
+      // 查找用户所在的房间并移除
+      const room = await roomService.findRoomByUserId(userId);
+      if (room) {
+        await roomService.leaveRoom({ userId, roomId: room.id! });
+      }
+    }
+  } else if (eventType === 'azure.webpubsub.user.message') {
+    // 处理用户消息
+    try {
+      const message = req.body;
+      console.log(`Received message from ${userId}:`, message);
+      
+      if (message.type === 'joinGroup' && message.group) {
+        await addUserToRoom(userId, message.group);
+        console.log(`Added user ${userId} to group ${message.group} via message`);
+      }
+    } catch (err) {
+      console.error('Error handling user message:', err);
+    }
+  }
+
+  res.status(200).send();
 });
 
 // 健康检查

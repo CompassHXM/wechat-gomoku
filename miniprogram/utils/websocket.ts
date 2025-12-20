@@ -32,7 +32,9 @@ class WebSocketManager {
         console.log('WebSocket已连接');
         this.reconnectAttempts = 0;
         
-        // 加入房间组
+        // 加入房间组 - 发送给后端处理
+        // 注意：如果后端没有配置 upstream，这个消息会被忽略
+        // 但我们已经在后端配置了 event handler 来处理这个消息
         this.send({
           type: 'joinGroup',
           group: roomId
@@ -42,8 +44,9 @@ class WebSocketManager {
       // 监听消息
       this.socket.onMessage((res) => {
         try {
+          console.log('Raw WebSocket message:', res.data);
           const data = JSON.parse(res.data as string);
-          console.log('收到消息:', data);
+          console.log('Parsed message:', data);
           
           // 通知所有处理器
           this.messageHandlers.forEach(handler => {
@@ -55,8 +58,10 @@ class WebSocketManager {
       });
 
       // 监听连接关闭
-      this.socket.onClose(() => {
-        console.log('WebSocket已断开');
+      this.socket.onClose((res) => {
+        console.log('WebSocket已断开', res);
+        console.log('Close Code:', res.code);
+        console.log('Close Reason:', res.reason);
         this.socket = null;
         
         // 尝试重连

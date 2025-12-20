@@ -87,6 +87,15 @@ export const api = {
     });
   },
 
+  // 离开房间
+  leaveRoom(userId: string, roomId: string) {
+    return request<any>({
+      url: '/api/rooms/leave',
+      method: 'POST',
+      data: { userId, roomId }
+    });
+  },
+
   // 健康检查
   healthCheck() {
     return request<{ status: string; timestamp: string }>({
