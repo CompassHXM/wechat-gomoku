@@ -11,7 +11,8 @@
   - 负责业务逻辑、房间管理、游戏规则判定。
 - **实时通信 (Real-time)**: Azure Web PubSub
   - 负责管理 WebSocket 长连接，实现服务端向客户端的实时消息推送。
-- **数据库 (Database)**: (目前代码中使用内存存储或简单的持久化，可扩展为 MongoDB/CosmosDB)
+- **数据库 (Database)**: Azure Cosmos DB (NoSQL)
+  - 存储房间状态、对战记录等数据。
 - **云函数 (Cloud Functions)**: 微信云开发
   - 负责用户登录鉴权 (OpenID 获取)。
 
@@ -79,7 +80,6 @@ root/
 ```
 
 ## 6. 未来扩展规划
-- **持久化存储**: 接入 MongoDB 或 Cosmos DB 保存对战历史。
 - **排行榜**: 基于用户胜率统计。
 - **AI 对战**: 集成 AI 算法实现人机对战。
 - **观战模式**: 完善 Spectator 角色的数据同步。
