@@ -20,28 +20,11 @@ class WebSocketManager {
         try {
             // 获取连接令牌
             const tokenData = await api_1.api.getToken(userId, roomId);
-            // 解析URL和Token
-            const urlObj = tokenData.url.split('?');
-            const baseUrl = urlObj[0];
-            const params = urlObj[1];
-            let token = '';
-            if (params) {
-                const searchParams = params.split('&');
-                for (const param of searchParams) {
-                    const parts = param.split('=');
-                    const key = parts[0];
-                    const value = parts[1];
-                    if (key === 'access_token') {
-                        token = value;
-                        break;
-                    }
-                }
-            }
             // 创建WebSocket连接
             console.log('Connecting to WebSocket...', tokenData.url);
             this.socket = wx.connectSocket({
                 url: tokenData.url,
-                // protocols: ['json.webpubsub.azure.v1'],
+                // protocols: ['json.webpubsub.azure.v1'], // 暂时移除子协议，尝试解决 Invalid HTTP status
                 perMessageDeflate: false,
                 fail: (err) => {
                     console.error('WebSocket连接失败:', err);
@@ -51,7 +34,9 @@ class WebSocketManager {
             this.socket.onOpen(() => {
                 console.log('WebSocket已连接');
                 this.reconnectAttempts = 0;
-                // 加入房间组
+                // 加入房间组 - 发送给后端处理
+                // 注意：如果后端没有配置 upstream，这个消息会被忽略
+                // 但我们已经在后端配置了 event handler 来处理这个消息
                 this.send({
                     type: 'joinGroup',
                     group: roomId
@@ -60,8 +45,9 @@ class WebSocketManager {
             // 监听消息
             this.socket.onMessage((res) => {
                 try {
+                    console.log('Raw WebSocket message:', res.data);
                     const data = JSON.parse(res.data);
-                    console.log('收到消息:', data);
+                    console.log('Parsed message:', data);
                     // 通知所有处理器
                     this.messageHandlers.forEach(handler => {
                         handler(data);
@@ -72,8 +58,10 @@ class WebSocketManager {
                 }
             });
             // 监听连接关闭
-            this.socket.onClose(() => {
-                console.log('WebSocket已断开');
+            this.socket.onClose((res) => {
+                console.log('WebSocket已断开', res);
+                console.log('Close Code:', res.code);
+                console.log('Close Reason:', res.reason);
                 this.socket = null;
                 // 尝试重连
                 this.attemptReconnect();

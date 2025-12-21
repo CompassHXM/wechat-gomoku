@@ -38,7 +38,11 @@
       </view>
 
       <scroll-view class="room-scroll" scroll-y>
-        <block wx:if="{{rooms.length > 0}}">
+        <view class="loading-tip" wx:if="{{isRefreshing}}">
+          <view class="loading-spinner"></view>
+          <text>加载中...</text>
+        </view>
+        <block wx:elif="{{rooms.length > 0}}">
           <view 
             class="room-item" 
             wx:for="{{rooms}}" 

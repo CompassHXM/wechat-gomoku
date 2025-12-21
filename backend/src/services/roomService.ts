@@ -36,7 +36,8 @@ export async function createRoom(request: CreateRoomRequest): Promise<GameRoom> 
     moveHistory: [],
     winner: null,
     createTime: new Date(),
-    updateTime: new Date()
+    updateTime: new Date(),
+    lastActionTime: new Date()
   };
 
   const { resource } = await container.items.create(room);
@@ -128,6 +129,7 @@ export async function joinRoom(request: JoinRoomRequest): Promise<GameRoom> {
   }
 
   room.updateTime = new Date();
+  room.lastActionTime = new Date();
   
   // 如果状态改变了，且状态是分区键，我们需要删除旧文档并创建新文档
   // 检查状态是否发生变化
@@ -212,6 +214,7 @@ export async function makeMove(request: MakeMoveRequest): Promise<GameRoom> {
     room.currentPlayer = room.currentPlayer === 1 ? 2 : 1;
   }
 
+  room.lastActionTime = new Date();
   room.updateTime = new Date();
   
   let resource: GameRoom;
@@ -405,6 +408,7 @@ export async function leaveRoom(request: LeaveRoomRequest): Promise<void> {
          room.players[0].isReady = true;
        }
     }
+    room.lastActionTime = new Date();
 
     room.updateTime = new Date();
 
@@ -416,5 +420,46 @@ export async function leaveRoom(request: LeaveRoomRequest): Promise<void> {
       const { resource } = await container.item(room.id!, room.status).replace(room);
       await sendToRoom(room.id!, { type: 'room_update', data: resource });
     }
+  }
+}
+
+// 清理不活跃房间
+export async function checkInactiveRooms(): Promise<void> {
+  const container = getContainer();
+  const tenMinutesAgo = new Date(Date.now() - 10 * 60 * 1000).toISOString();
+  
+  try {
+    // 查询不活跃房间
+    // 注意：Cosmos DB SQL API 中比较日期字符串是可行的，只要格式是 ISO 8601
+    // 我们还需要确保 lastActionTime 存在
+    const query = `SELECT * FROM c WHERE c.lastActionTime < @threshold`;
+    
+    const { resources } = await container.items
+      .query({
+        query,
+        parameters: [{ name: '@threshold', value: tenMinutesAgo }]
+      })
+      .fetchAll();
+      
+    if (resources.length > 0) {
+      console.log(`Found ${resources.length} inactive rooms to clean up.`);
+    }
+
+    for (const room of resources) {
+      const gameRoom = room as GameRoom;
+      console.log(`Cleaning up inactive room: ${gameRoom.id}`);
+      
+      // 通知房间内所有用户
+      await sendToRoom(gameRoom.id!, {
+        type: 'room_deleted',
+        roomId: gameRoom.id,
+        reason: 'inactivity'
+      });
+      
+      // 删除房间
+      await deleteRoom(gameRoom.id!, gameRoom.status);
+    }
+  } catch (error) {
+    console.error('Error checking inactive rooms:', error);
   }
 }

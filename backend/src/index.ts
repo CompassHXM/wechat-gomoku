@@ -3,6 +3,7 @@ import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import { initDatabase } from './config/database';
+import { checkInactiveRooms } from './services/roomService';
 import routes from './routes';
 
 dotenv.config();
@@ -72,6 +73,11 @@ async function start() {
       console.log(`Server is running on port ${PORT}`);
       console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
       console.log(`API endpoint: http://localhost:${PORT}/api`);
+      
+      // 启动定期清理任务 (每分钟检查一次)
+      setInterval(() => {
+        checkInactiveRooms().catch(err => console.error('Error in cleanup task:', err));
+      }, 60 * 1000);
     });
   } catch (error) {
     console.error('Failed to start server:', error);

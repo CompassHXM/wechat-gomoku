@@ -103,7 +103,7 @@ Page({
           moveHistory: room.moveHistory || [],
           currentPlayer: room.currentPlayer || 1
         })
-        this.drawBoard()
+        this.renderBoard()
       }
 
       wx.hideLoading()
@@ -166,6 +166,9 @@ Page({
       gameStatus = room.winner ? `${room.winner}获胜！` : '游戏结束'
     }
 
+    const wasGameOver = this.data.gameOver
+    const isGameOver = room.status === 'finished'
+
     this.setData({
       board: room.board || this.data.board,
       currentPlayer: room.currentPlayer || 1,
@@ -174,10 +177,33 @@ Page({
       gameStatus,
       blackPlayer,
       whitePlayer
+    }, () => {
+      // 重绘棋盘
+      this.renderBoard()
     })
 
-    // 重绘棋盘
-    this.drawBoard()
+    if (!wasGameOver && isGameOver) {
+      const winnerText = room.winner ? `${room.winner}获胜！` : '游戏结束'
+      wx.showToast({
+        title: winnerText,
+        icon: 'success',
+        duration: 2000
+      })
+      
+      setTimeout(() => {
+        wx.showModal({
+          title: '游戏结束',
+          content: winnerText,
+          showCancel: false,
+          confirmText: '返回大厅',
+          success: (res) => {
+            if (res.confirm) {
+              this.backToLobby()
+            }
+          }
+        })
+      }, 1000)
+    }
   },
 
   async initGame() {
@@ -222,67 +248,100 @@ Page({
             cellSize: res[0].width / this.data.boardSize
           })
 
-          this.drawBoard()
+          this.renderBoard()
         }
       })
   },
 
-  drawBoard() {
-    if (!this.ctx) return
-
-    const ctx = this.ctx
-    const canvasSize = this.data.cellSize * this.data.boardSize
-    
-    // 清空画布
-    ctx.clearRect(0, 0, canvasSize, canvasSize)
-
-    // 绘制背景
-    ctx.fillStyle = '#dcb35c'
-    ctx.fillRect(0, 0, canvasSize, canvasSize)
-
-    // 绘制网格线
-    ctx.strokeStyle = '#000000'
-    ctx.lineWidth = 1
-
-    for (let i = 0; i < this.data.boardSize; i++) {
-      // 垂直线
-      ctx.beginPath()
-      ctx.moveTo(this.data.cellSize * (i + 0.5), this.data.cellSize * 0.5)
-      ctx.lineTo(this.data.cellSize * (i + 0.5), canvasSize - this.data.cellSize * 0.5)
-      ctx.stroke()
-
-      // 水平线
-      ctx.beginPath()
-      ctx.moveTo(this.data.cellSize * 0.5, this.data.cellSize * (i + 0.5))
-      ctx.lineTo(canvasSize - this.data.cellSize * 0.5, this.data.cellSize * (i + 0.5))
-      ctx.stroke()
+  renderBoard() {
+    if (!this.ctx) {
+      return
     }
 
-    // 绘制星位（天元和四个角的星位）
-    const starPoints = [
-      [3, 3], [3, 11], [7, 7], [11, 3], [11, 11]
-    ]
-    ctx.fillStyle = '#000000'
-    starPoints.forEach(([row, col]) => {
-      ctx.beginPath()
-      ctx.arc(
-        this.data.cellSize * (col + 0.5),
-        this.data.cellSize * (row + 0.5),
-        3,
-        0,
-        2 * Math.PI
-      )
-      ctx.fill()
-    })
+    try {
+      const ctx = this.ctx
+      const canvasSize = this.data.cellSize * this.data.boardSize
+      
+      // 清空画布
+      ctx.clearRect(0, 0, canvasSize, canvasSize)
 
-    // 绘制所有棋子
-    for (let i = 0; i < this.data.boardSize; i++) {
-      for (let j = 0; j < this.data.boardSize; j++) {
-        if (this.data.board[i][j] !== 0) {
-          this.drawPiece(ctx, i, j, this.data.board[i][j])
+      // 绘制背景
+      ctx.fillStyle = '#dcb35c'
+      ctx.fillRect(0, 0, canvasSize, canvasSize)
+
+      // 绘制网格线
+      ctx.strokeStyle = '#000000'
+      ctx.lineWidth = 1
+
+      for (let i = 0; i < this.data.boardSize; i++) {
+        // 垂直线
+        ctx.beginPath()
+        ctx.moveTo(this.data.cellSize * (i + 0.5), this.data.cellSize * 0.5)
+        ctx.lineTo(this.data.cellSize * (i + 0.5), canvasSize - this.data.cellSize * 0.5)
+        ctx.stroke()
+
+        // 水平线
+        ctx.beginPath()
+        ctx.moveTo(this.data.cellSize * 0.5, this.data.cellSize * (i + 0.5))
+        ctx.lineTo(canvasSize - this.data.cellSize * 0.5, this.data.cellSize * (i + 0.5))
+        ctx.stroke()
+      }
+
+      // 绘制星位（天元和四个角的星位）
+      const starPoints = [
+        [3, 3], [3, 11], [7, 7], [11, 3], [11, 11]
+      ]
+      ctx.fillStyle = '#000000'
+      starPoints.forEach(([row, col]) => {
+        ctx.beginPath()
+        ctx.arc(
+          this.data.cellSize * (col + 0.5),
+          this.data.cellSize * (row + 0.5),
+          3,
+          0,
+          2 * Math.PI
+        )
+        ctx.fill()
+      })
+
+      // 绘制所有棋子
+      for (let i = 0; i < this.data.boardSize; i++) {
+        for (let j = 0; j < this.data.boardSize; j++) {
+          if (this.data.board[i][j] !== 0) {
+            this.drawPiece(ctx, i, j, this.data.board[i][j])
+          }
         }
       }
+
+      // 绘制最后一步的标记
+      if (this.data.moveHistory.length > 0) {
+        const lastMove = this.data.moveHistory[this.data.moveHistory.length - 1]
+        this.drawLastMoveMarker(ctx, lastMove.row, lastMove.col)
+      }
+    } catch (error) {
+      console.error('renderBoard error:', error)
     }
+  },
+
+  drawLastMoveMarker(ctx: any, row: number, col: number) {
+    const x = this.data.cellSize * (col + 0.5)
+    const y = this.data.cellSize * (row + 0.5)
+    const size = this.data.cellSize * 0.25
+
+    ctx.save()
+    ctx.lineCap = 'round'
+    
+    // 绘制红色中心线
+    ctx.strokeStyle = '#ff0000'
+    ctx.lineWidth = 1
+    ctx.beginPath()
+    ctx.moveTo(x - size, y)
+    ctx.lineTo(x + size, y)
+    ctx.moveTo(x, y - size)
+    ctx.lineTo(x, y + size)
+    ctx.stroke()
+    
+    ctx.restore()
   },
 
   drawPiece(ctx: any, row: number, col: number, player: number) {
@@ -395,7 +454,7 @@ Page({
     board[row][col] = this.data.currentPlayer
 
     // 记录移动历史
-    const moveHistory = this.data.moveHistory
+    const moveHistory = [...this.data.moveHistory]
     moveHistory.push({
       row,
       col,
@@ -403,6 +462,7 @@ Page({
     })
 
     console.log('放置棋子:', row, col, this.data.currentPlayer)
+    console.log('moveHistory updated, length:', moveHistory.length)
 
     this.setData({
       board,
@@ -410,7 +470,7 @@ Page({
     }, () => {
       // 在setData回调中重新绘制棋盘
       console.log('开始重绘棋盘')
-      this.drawBoard()
+      this.renderBoard()
     })
 
     // 检查是否获胜
@@ -420,17 +480,26 @@ Page({
         gameStatus: `${winner}获胜！`,
         gameOver: true
       })
-      wx.showModal({
-        title: '游戏结束',
-        content: `${winner}获胜！`,
-        showCancel: false,
-        confirmText: '再来一局',
-        success: (res) => {
-          if (res.confirm) {
-            this.restartGame()
-          }
-        }
+      
+      wx.showToast({
+        title: `${winner}获胜！`,
+        icon: 'success',
+        duration: 2000
       })
+
+      setTimeout(() => {
+        wx.showModal({
+          title: '游戏结束',
+          content: `${winner}获胜！`,
+          showCancel: false,
+          confirmText: '再来一局',
+          success: (res) => {
+            if (res.confirm) {
+              this.restartGame()
+            }
+          }
+        })
+      }, 1000)
       return
     }
 
@@ -562,7 +631,7 @@ Page({
         gameOver: false
       })
 
-      this.drawBoard()
+      this.renderBoard()
     }
   },
 

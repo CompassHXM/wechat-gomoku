@@ -34,6 +34,7 @@ export interface GameRoom {
   winner: string | null;
   createTime: Date;
   updateTime: Date;
+  lastActionTime: Date;
 }
 
 export interface CreateRoomRequest {

@@ -98,11 +98,14 @@
 .action-btn {
   flex: 1;
   height: 80rpx;
-  line-height: 80rpx;
+  display: flex;
+  justify-content: center;
+  align-items: center;
   border-radius: 10rpx;
   font-size: 28rpx;
   font-weight: bold;
   border: none;
+  padding: 0; /* 移除默认内边距 */
 }
 
 .create-btn {
@@ -201,4 +204,29 @@
   height: 400rpx;
   color: #999;
   font-size: 28rpx;
+}
+
+.loading-tip {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  height: 400rpx;
+  color: #666;
+  font-size: 28rpx;
+}
+
+.loading-spinner {
+  width: 60rpx;
+  height: 60rpx;
+  border: 6rpx solid #f3f3f3;
+  border-top: 6rpx solid #667eea;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin-bottom: 20rpx;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
 }

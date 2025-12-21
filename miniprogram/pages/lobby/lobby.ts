@@ -6,7 +6,8 @@ Page({
     nickname: '',
     inputNickname: '',
     rooms: [] as any[],
-    userId: ''
+    userId: '',
+    isRefreshing: false
   },
 
   onLoad() {
@@ -14,15 +15,19 @@ Page({
     const savedNickname = wx.getStorageSync('userNickname')
     const savedUserId = wx.getStorageSync('userId')
     
-    if (savedNickname && savedUserId) {
-      this.setData({ 
-        nickname: savedNickname,
-        userId: savedUserId
-      })
-      this.refreshRooms()
-    } else if (!savedUserId) {
+    // 总是优先加载 userId
+    if (savedUserId) {
+      this.setData({ userId: savedUserId })
+    } else {
       // 生成唯一用户ID
       this.generateUserId()
+    }
+
+    if (savedNickname) {
+      this.setData({ 
+        nickname: savedNickname
+      })
+      this.refreshRooms()
     }
   },
 
@@ -94,15 +99,27 @@ Page({
 
   // 刷新房间列表
   async refreshRooms() {
+    this.setData({ 
+      isRefreshing: true,
+      rooms: [] // 清空列表以提供视觉反馈
+    })
+
     try {
       const rooms = await api.getRooms()
-      this.setData({ rooms })
+      // 稍微延迟一下以展示加载效果
+      setTimeout(() => {
+        this.setData({ 
+          rooms,
+          isRefreshing: false
+        })
+      }, 500)
     } catch (err: any) {
       console.error('获取房间列表失败', err)
       wx.showToast({
         title: '获取房间列表失败',
         icon: 'none'
       })
+      this.setData({ isRefreshing: false })
     }
   },
 

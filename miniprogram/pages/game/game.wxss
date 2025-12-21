@@ -90,8 +90,9 @@
 }
 
 .game-status {
-  font-size: 28rpx;
-  color: #666;
+  font-size: 40rpx;
+  color: #e64340;
+  font-weight: bold;
   min-height: 40rpx;
 }
 

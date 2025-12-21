@@ -42,6 +42,12 @@ Page({
     onUnload() {
         // 页面卸载时关闭WebSocket连接
         if (this.data.isOnline) {
+            // 离开房间
+            if (this.data.roomId && this.data.myUserId) {
+                api_1.api.leaveRoom(this.data.myUserId, this.data.roomId).catch(err => {
+                    console.error('Failed to leave room:', err);
+                });
+            }
             websocket_1.wsManager.disconnect();
         }
     },
@@ -87,7 +93,7 @@ Page({
                     moveHistory: room.moveHistory || [],
                     currentPlayer: room.currentPlayer || 1
                 });
-                this.drawBoard();
+                this.renderBoard();
             }
             wx.hideLoading();
             // 连接WebSocket接收实时更新
@@ -142,6 +148,8 @@ Page({
         else if (room.status === 'finished') {
             gameStatus = room.winner ? `${room.winner}获胜！` : '游戏结束';
         }
+        const wasGameOver = this.data.gameOver;
+        const isGameOver = room.status === 'finished';
         this.setData({
             board: room.board || this.data.board,
             currentPlayer: room.currentPlayer || 1,
@@ -150,9 +158,31 @@ Page({
             gameStatus,
             blackPlayer,
             whitePlayer
+        }, () => {
+            // 重绘棋盘
+            this.renderBoard();
         });
-        // 重绘棋盘
-        this.drawBoard();
+        if (!wasGameOver && isGameOver) {
+            const winnerText = room.winner ? `${room.winner}获胜！` : '游戏结束';
+            wx.showToast({
+                title: winnerText,
+                icon: 'success',
+                duration: 2000
+            });
+            setTimeout(() => {
+                wx.showModal({
+                    title: '游戏结束',
+                    content: winnerText,
+                    showCancel: false,
+                    confirmText: '返回大厅',
+                    success: (res) => {
+                        if (res.confirm) {
+                            this.backToLobby();
+                        }
+                    }
+                });
+            }, 1000);
+        }
     },
     async initGame() {
         const board = [];
@@ -189,53 +219,81 @@ Page({
                 this.setData({
                     cellSize: res[0].width / this.data.boardSize
                 });
-                this.drawBoard();
+                this.renderBoard();
             }
         });
     },
-    drawBoard() {
-        if (!this.ctx)
+    renderBoard() {
+        if (!this.ctx) {
             return;
-        const ctx = this.ctx;
-        const canvasSize = this.data.cellSize * this.data.boardSize;
-        // 清空画布
-        ctx.clearRect(0, 0, canvasSize, canvasSize);
-        // 绘制背景
-        ctx.fillStyle = '#dcb35c';
-        ctx.fillRect(0, 0, canvasSize, canvasSize);
-        // 绘制网格线
-        ctx.strokeStyle = '#000000';
-        ctx.lineWidth = 1;
-        for (let i = 0; i < this.data.boardSize; i++) {
-            // 垂直线
-            ctx.beginPath();
-            ctx.moveTo(this.data.cellSize * (i + 0.5), this.data.cellSize * 0.5);
-            ctx.lineTo(this.data.cellSize * (i + 0.5), canvasSize - this.data.cellSize * 0.5);
-            ctx.stroke();
-            // 水平线
-            ctx.beginPath();
-            ctx.moveTo(this.data.cellSize * 0.5, this.data.cellSize * (i + 0.5));
-            ctx.lineTo(canvasSize - this.data.cellSize * 0.5, this.data.cellSize * (i + 0.5));
-            ctx.stroke();
         }
-        // 绘制星位（天元和四个角的星位）
-        const starPoints = [
-            [3, 3], [3, 11], [7, 7], [11, 3], [11, 11]
-        ];
-        ctx.fillStyle = '#000000';
-        starPoints.forEach(([row, col]) => {
-            ctx.beginPath();
-            ctx.arc(this.data.cellSize * (col + 0.5), this.data.cellSize * (row + 0.5), 3, 0, 2 * Math.PI);
-            ctx.fill();
-        });
-        // 绘制所有棋子
-        for (let i = 0; i < this.data.boardSize; i++) {
-            for (let j = 0; j < this.data.boardSize; j++) {
-                if (this.data.board[i][j] !== 0) {
-                    this.drawPiece(ctx, i, j, this.data.board[i][j]);
+        try {
+            const ctx = this.ctx;
+            const canvasSize = this.data.cellSize * this.data.boardSize;
+            // 清空画布
+            ctx.clearRect(0, 0, canvasSize, canvasSize);
+            // 绘制背景
+            ctx.fillStyle = '#dcb35c';
+            ctx.fillRect(0, 0, canvasSize, canvasSize);
+            // 绘制网格线
+            ctx.strokeStyle = '#000000';
+            ctx.lineWidth = 1;
+            for (let i = 0; i < this.data.boardSize; i++) {
+                // 垂直线
+                ctx.beginPath();
+                ctx.moveTo(this.data.cellSize * (i + 0.5), this.data.cellSize * 0.5);
+                ctx.lineTo(this.data.cellSize * (i + 0.5), canvasSize - this.data.cellSize * 0.5);
+                ctx.stroke();
+                // 水平线
+                ctx.beginPath();
+                ctx.moveTo(this.data.cellSize * 0.5, this.data.cellSize * (i + 0.5));
+                ctx.lineTo(canvasSize - this.data.cellSize * 0.5, this.data.cellSize * (i + 0.5));
+                ctx.stroke();
+            }
+            // 绘制星位（天元和四个角的星位）
+            const starPoints = [
+                [3, 3], [3, 11], [7, 7], [11, 3], [11, 11]
+            ];
+            ctx.fillStyle = '#000000';
+            starPoints.forEach(([row, col]) => {
+                ctx.beginPath();
+                ctx.arc(this.data.cellSize * (col + 0.5), this.data.cellSize * (row + 0.5), 3, 0, 2 * Math.PI);
+                ctx.fill();
+            });
+            // 绘制所有棋子
+            for (let i = 0; i < this.data.boardSize; i++) {
+                for (let j = 0; j < this.data.boardSize; j++) {
+                    if (this.data.board[i][j] !== 0) {
+                        this.drawPiece(ctx, i, j, this.data.board[i][j]);
+                    }
                 }
             }
+            // 绘制最后一步的标记
+            if (this.data.moveHistory.length > 0) {
+                const lastMove = this.data.moveHistory[this.data.moveHistory.length - 1];
+                this.drawLastMoveMarker(ctx, lastMove.row, lastMove.col);
+            }
         }
+        catch (error) {
+            console.error('renderBoard error:', error);
+        }
+    },
+    drawLastMoveMarker(ctx, row, col) {
+        const x = this.data.cellSize * (col + 0.5);
+        const y = this.data.cellSize * (row + 0.5);
+        const size = this.data.cellSize * 0.25;
+        ctx.save();
+        ctx.lineCap = 'round';
+        // 绘制红色中心线
+        ctx.strokeStyle = '#ff0000';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(x - size, y);
+        ctx.lineTo(x + size, y);
+        ctx.moveTo(x, y - size);
+        ctx.lineTo(x, y + size);
+        ctx.stroke();
+        ctx.restore();
     },
     drawPiece(ctx, row, col, player) {
         const x = this.data.cellSize * (col + 0.5);
@@ -327,20 +385,21 @@ Page({
         const board = this.data.board;
         board[row][col] = this.data.currentPlayer;
         // 记录移动历史
-        const moveHistory = this.data.moveHistory;
+        const moveHistory = [...this.data.moveHistory];
         moveHistory.push({
             row,
             col,
             player: this.data.currentPlayer
         });
         console.log('放置棋子:', row, col, this.data.currentPlayer);
+        console.log('moveHistory updated, length:', moveHistory.length);
         this.setData({
             board,
             moveHistory
         }, () => {
             // 在setData回调中重新绘制棋盘
             console.log('开始重绘棋盘');
-            this.drawBoard();
+            this.renderBoard();
         });
         // 检查是否获胜
         if (this.checkWin(row, col)) {
@@ -349,17 +408,24 @@ Page({
                 gameStatus: `${winner}获胜！`,
                 gameOver: true
             });
-            wx.showModal({
-                title: '游戏结束',
-                content: `${winner}获胜！`,
-                showCancel: false,
-                confirmText: '再来一局',
-                success: (res) => {
-                    if (res.confirm) {
-                        this.restartGame();
-                    }
-                }
+            wx.showToast({
+                title: `${winner}获胜！`,
+                icon: 'success',
+                duration: 2000
             });
+            setTimeout(() => {
+                wx.showModal({
+                    title: '游戏结束',
+                    content: `${winner}获胜！`,
+                    showCancel: false,
+                    confirmText: '再来一局',
+                    success: (res) => {
+                        if (res.confirm) {
+                            this.restartGame();
+                        }
+                    }
+                });
+            }, 1000);
             return;
         }
         // 检查是否平局
@@ -471,17 +537,13 @@ Page({
                 gameStatus: '游戏进行中',
                 gameOver: false
             });
-            this.drawBoard();
+            this.renderBoard();
         }
     },
     restartGame() {
         this.initGame();
     },
     backToLobby() {
-        // 关闭WebSocket连接
-        if (this.data.isOnline) {
-            websocket_1.wsManager.disconnect();
-        }
         wx.navigateBack({
             fail: () => {
                 wx.redirectTo({

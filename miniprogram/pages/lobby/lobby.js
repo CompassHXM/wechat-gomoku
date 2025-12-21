@@ -7,22 +7,26 @@ Page({
         nickname: '',
         inputNickname: '',
         rooms: [],
-        userId: ''
+        userId: '',
+        isRefreshing: false
     },
     onLoad() {
         // 尝试从本地存储加载昵称
         const savedNickname = wx.getStorageSync('userNickname');
         const savedUserId = wx.getStorageSync('userId');
-        if (savedNickname && savedUserId) {
-            this.setData({
-                nickname: savedNickname,
-                userId: savedUserId
-            });
-            this.refreshRooms();
+        // 总是优先加载 userId
+        if (savedUserId) {
+            this.setData({ userId: savedUserId });
         }
-        else if (!savedUserId) {
+        else {
             // 生成唯一用户ID
             this.generateUserId();
+        }
+        if (savedNickname) {
+            this.setData({
+                nickname: savedNickname
+            });
+            this.refreshRooms();
         }
     },
     onShow() {
@@ -83,9 +87,19 @@ Page({
     },
     // 刷新房间列表
     async refreshRooms() {
+        this.setData({
+            isRefreshing: true,
+            rooms: [] // 清空列表以提供视觉反馈
+        });
         try {
             const rooms = await api_1.api.getRooms();
-            this.setData({ rooms });
+            // 稍微延迟一下以展示加载效果
+            setTimeout(() => {
+                this.setData({
+                    rooms,
+                    isRefreshing: false
+                });
+            }, 500);
         }
         catch (err) {
             console.error('获取房间列表失败', err);
@@ -93,6 +107,7 @@ Page({
                 title: '获取房间列表失败',
                 icon: 'none'
             });
+            this.setData({ isRefreshing: false });
         }
     },
     // 加入房间

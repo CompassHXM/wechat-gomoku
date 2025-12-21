@@ -77,6 +77,14 @@ exports.api = {
             data: { userId, roomId, row, col }
         });
     },
+    // 离开房间
+    leaveRoom(userId, roomId) {
+        return request({
+            url: '/api/rooms/leave',
+            method: 'POST',
+            data: { userId, roomId }
+        });
+    },
     // 健康检查
     healthCheck() {
         return request({
