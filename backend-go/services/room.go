@@ -85,24 +85,34 @@ func CreateRoom(ctx context.Context, req types.CreateRoomRequest) (*types.GameRo
 func GetRooms(ctx context.Context) ([]types.GameRoom, error) {
 	container := config.GetContainer()
 
-	query := "SELECT * FROM c WHERE c.status IN ('waiting', 'playing') ORDER BY c.createTime DESC"
-	queryPager := container.NewQueryItemsPager(query, azcosmos.PartitionKey{}, nil)
-
+	// Query each partition separately
+	statuses := []string{"waiting", "playing"}
 	var rooms []types.GameRoom
 
-	for queryPager.More() {
-		response, err := queryPager.NextPage(ctx)
-		if err != nil {
-			return nil, fmt.Errorf("failed to get rooms: %w", err)
-		}
+	for _, status := range statuses {
+		query := "SELECT * FROM c WHERE c.status = @status ORDER BY c.createTime DESC"
+		partitionKey := azcosmos.NewPartitionKeyString(status)
+		queryPager := container.NewQueryItemsPager(query, partitionKey, &azcosmos.QueryOptions{
+			QueryParameters: []azcosmos.QueryParameter{
+				{Name: "@status", Value: status},
+			},
+		})
 
-		for _, item := range response.Items {
-			var room types.GameRoom
-			if err := json.Unmarshal(item, &room); err != nil {
-				log.Printf("Failed to unmarshal room: %v", err)
+		for queryPager.More() {
+			response, err := queryPager.NextPage(ctx)
+			if err != nil {
+				log.Printf("Failed to query rooms for status %s: %v", status, err)
 				continue
 			}
-			rooms = append(rooms, room)
+
+			for _, item := range response.Items {
+				var room types.GameRoom
+				if err := json.Unmarshal(item, &room); err != nil {
+					log.Printf("Failed to unmarshal room: %v", err)
+					continue
+				}
+				rooms = append(rooms, room)
+			}
 		}
 	}
 
@@ -113,25 +123,32 @@ func GetRooms(ctx context.Context) ([]types.GameRoom, error) {
 func GetRoom(ctx context.Context, roomID string) (*types.GameRoom, error) {
 	container := config.GetContainer()
 
-	query := "SELECT * FROM c WHERE c.id = @id"
-	queryPager := container.NewQueryItemsPager(query, azcosmos.PartitionKey{}, &azcosmos.QueryOptions{
-		QueryParameters: []azcosmos.QueryParameter{
-			{Name: "@id", Value: roomID},
-		},
-	})
+	// Query each partition separately
+	statuses := []string{"waiting", "playing", "finished"}
+	for _, status := range statuses {
+		query := "SELECT * FROM c WHERE c.id = @id AND c.status = @status"
+		partitionKey := azcosmos.NewPartitionKeyString(status)
+		queryPager := container.NewQueryItemsPager(query, partitionKey, &azcosmos.QueryOptions{
+			QueryParameters: []azcosmos.QueryParameter{
+				{Name: "@id", Value: roomID},
+				{Name: "@status", Value: status},
+			},
+		})
 
-	for queryPager.More() {
-		response, err := queryPager.NextPage(ctx)
-		if err != nil {
-			return nil, fmt.Errorf("failed to get room: %w", err)
-		}
-
-		if len(response.Items) > 0 {
-			var room types.GameRoom
-			if err := json.Unmarshal(response.Items[0], &room); err != nil {
-				return nil, fmt.Errorf("failed to unmarshal room: %w", err)
+		for queryPager.More() {
+			response, err := queryPager.NextPage(ctx)
+			if err != nil {
+				log.Printf("Failed to query room in status %s: %v", status, err)
+				continue
 			}
-			return &room, nil
+
+			if len(response.Items) > 0 {
+				var room types.GameRoom
+				if err := json.Unmarshal(response.Items[0], &room); err != nil {
+					return nil, fmt.Errorf("failed to unmarshal room: %w", err)
+				}
+				return &room, nil
+			}
 		}
 	}
 
@@ -142,28 +159,37 @@ func GetRoom(ctx context.Context, roomID string) (*types.GameRoom, error) {
 func FindRoomByUserID(ctx context.Context, userID string) (*types.GameRoom, error) {
 	container := config.GetContainer()
 
-	query := `SELECT * FROM c 
-		WHERE EXISTS(SELECT VALUE p FROM p IN c.players WHERE p.userId = @userId) 
-		OR EXISTS(SELECT VALUE s FROM s IN c.spectators WHERE s.userId = @userId)`
+	// Query each partition separately
+	statuses := []string{"waiting", "playing", "finished"}
+	for _, status := range statuses {
+		query := `SELECT * FROM c 
+			WHERE c.status = @status AND (
+				EXISTS(SELECT VALUE p FROM p IN c.players WHERE p.userId = @userId) 
+				OR EXISTS(SELECT VALUE s FROM s IN c.spectators WHERE s.userId = @userId)
+			)`
 
-	queryPager := container.NewQueryItemsPager(query, azcosmos.PartitionKey{}, &azcosmos.QueryOptions{
-		QueryParameters: []azcosmos.QueryParameter{
-			{Name: "@userId", Value: userID},
-		},
-	})
+		partitionKey := azcosmos.NewPartitionKeyString(status)
+		queryPager := container.NewQueryItemsPager(query, partitionKey, &azcosmos.QueryOptions{
+			QueryParameters: []azcosmos.QueryParameter{
+				{Name: "@userId", Value: userID},
+				{Name: "@status", Value: status},
+			},
+		})
 
-	for queryPager.More() {
-		response, err := queryPager.NextPage(ctx)
-		if err != nil {
-			return nil, fmt.Errorf("failed to find room by user: %w", err)
-		}
-
-		if len(response.Items) > 0 {
-			var room types.GameRoom
-			if err := json.Unmarshal(response.Items[0], &room); err != nil {
-				return nil, fmt.Errorf("failed to unmarshal room: %w", err)
+		for queryPager.More() {
+			response, err := queryPager.NextPage(ctx)
+			if err != nil {
+				log.Printf("Failed to find room by user in status %s: %v", status, err)
+				continue
 			}
-			return &room, nil
+
+			if len(response.Items) > 0 {
+				var room types.GameRoom
+				if err := json.Unmarshal(response.Items[0], &room); err != nil {
+					return nil, fmt.Errorf("failed to unmarshal room: %w", err)
+				}
+				return &room, nil
+			}
 		}
 	}
 
