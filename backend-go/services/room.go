@@ -90,13 +90,10 @@ func GetRooms(ctx context.Context) ([]types.GameRoom, error) {
 	var rooms []types.GameRoom
 
 	for _, status := range statuses {
-		query := "SELECT * FROM c WHERE c.status = @status ORDER BY c.createTime DESC"
+		// When querying within a partition, we don't need the status filter in the query
+		query := "SELECT * FROM c ORDER BY c.createTime DESC"
 		partitionKey := azcosmos.NewPartitionKeyString(status)
-		queryPager := container.NewQueryItemsPager(query, partitionKey, &azcosmos.QueryOptions{
-			QueryParameters: []azcosmos.QueryParameter{
-				{Name: "@status", Value: status},
-			},
-		})
+		queryPager := container.NewQueryItemsPager(query, partitionKey, nil)
 
 		for queryPager.More() {
 			response, err := queryPager.NextPage(ctx)
@@ -126,12 +123,11 @@ func GetRoom(ctx context.Context, roomID string) (*types.GameRoom, error) {
 	// Query each partition separately
 	statuses := []string{"waiting", "playing", "finished"}
 	for _, status := range statuses {
-		query := "SELECT * FROM c WHERE c.id = @id AND c.status = @status"
+		query := "SELECT * FROM c WHERE c.id = @id"
 		partitionKey := azcosmos.NewPartitionKeyString(status)
 		queryPager := container.NewQueryItemsPager(query, partitionKey, &azcosmos.QueryOptions{
 			QueryParameters: []azcosmos.QueryParameter{
 				{Name: "@id", Value: roomID},
-				{Name: "@status", Value: status},
 			},
 		})
 
@@ -163,16 +159,13 @@ func FindRoomByUserID(ctx context.Context, userID string) (*types.GameRoom, erro
 	statuses := []string{"waiting", "playing", "finished"}
 	for _, status := range statuses {
 		query := `SELECT * FROM c 
-			WHERE c.status = @status AND (
-				EXISTS(SELECT VALUE p FROM p IN c.players WHERE p.userId = @userId) 
-				OR EXISTS(SELECT VALUE s FROM s IN c.spectators WHERE s.userId = @userId)
-			)`
+			WHERE EXISTS(SELECT VALUE p FROM p IN c.players WHERE p.userId = @userId) 
+			OR EXISTS(SELECT VALUE s FROM s IN c.spectators WHERE s.userId = @userId)`
 
 		partitionKey := azcosmos.NewPartitionKeyString(status)
 		queryPager := container.NewQueryItemsPager(query, partitionKey, &azcosmos.QueryOptions{
 			QueryParameters: []azcosmos.QueryParameter{
 				{Name: "@userId", Value: userID},
-				{Name: "@status", Value: status},
 			},
 		})
 

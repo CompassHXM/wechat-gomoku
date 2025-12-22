@@ -140,11 +140,10 @@ func CheckInactiveRooms(ctx context.Context) error {
 	var inactiveRooms []types.GameRoom
 
 	for _, status := range statuses {
-		query := "SELECT * FROM c WHERE c.status = @status AND c.lastActionTime < @threshold"
+		query := "SELECT * FROM c WHERE c.lastActionTime < @threshold"
 		partitionKey := azcosmos.NewPartitionKeyString(status)
 		queryPager := container.NewQueryItemsPager(query, partitionKey, &azcosmos.QueryOptions{
 			QueryParameters: []azcosmos.QueryParameter{
-				{Name: "@status", Value: status},
 				{Name: "@threshold", Value: tenMinutesAgo},
 			},
 		})
