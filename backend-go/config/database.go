@@ -56,8 +56,8 @@ func InitDatabase(ctx context.Context) error {
 	databaseProperties := azcosmos.DatabaseProperties{ID: databaseID}
 	_, err = client.CreateDatabase(ctx, databaseProperties, nil)
 	if err != nil {
-		// 如果数据库已存在，忽略错误
-		log.Printf("Database may already exist: %v", err)
+		// 如果数据库已存在，忽略错误（这是正常情况）
+		log.Printf("Database initialization: %s (this is normal if database already exists)", databaseID)
 	}
 
 	// 获取容器客户端

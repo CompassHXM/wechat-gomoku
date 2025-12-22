@@ -3,7 +3,6 @@ package services
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"log"
 	"time"
 
@@ -136,28 +135,35 @@ func CheckInactiveRooms(ctx context.Context) error {
 	container := config.GetContainer()
 	tenMinutesAgo := time.Now().Add(-10 * time.Minute).Format(time.RFC3339)
 
-	query := "SELECT * FROM c WHERE c.lastActionTime < @threshold"
-	queryPager := container.NewQueryItemsPager(query, azcosmos.PartitionKey{}, &azcosmos.QueryOptions{
-		QueryParameters: []azcosmos.QueryParameter{
-			{Name: "@threshold", Value: tenMinutesAgo},
-		},
-	})
-
+	// Query across all partitions (waiting, playing, finished)
+	statuses := []string{"waiting", "playing", "finished"}
 	var inactiveRooms []types.GameRoom
 
-	for queryPager.More() {
-		response, err := queryPager.NextPage(ctx)
-		if err != nil {
-			return fmt.Errorf("failed to query inactive rooms: %w", err)
-		}
+	for _, status := range statuses {
+		query := "SELECT * FROM c WHERE c.status = @status AND c.lastActionTime < @threshold"
+		partitionKey := azcosmos.NewPartitionKeyString(status)
+		queryPager := container.NewQueryItemsPager(query, partitionKey, &azcosmos.QueryOptions{
+			QueryParameters: []azcosmos.QueryParameter{
+				{Name: "@status", Value: status},
+				{Name: "@threshold", Value: tenMinutesAgo},
+			},
+		})
 
-		for _, item := range response.Items {
-			var room types.GameRoom
-			if err := json.Unmarshal(item, &room); err != nil {
-				log.Printf("Failed to unmarshal room: %v", err)
+		for queryPager.More() {
+			response, err := queryPager.NextPage(ctx)
+			if err != nil {
+				log.Printf("Failed to query inactive rooms for status %s: %v", status, err)
 				continue
 			}
-			inactiveRooms = append(inactiveRooms, room)
+
+			for _, item := range response.Items {
+				var room types.GameRoom
+				if err := json.Unmarshal(item, &room); err != nil {
+					log.Printf("Failed to unmarshal room: %v", err)
+					continue
+				}
+				inactiveRooms = append(inactiveRooms, room)
+			}
 		}
 	}
 
