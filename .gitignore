@@ -10,6 +10,8 @@ yarn.lock
 .env
 .env.local
 .env.*.local
+backend-go/.env
+backend-nodejs/.env
 
 # WeChat Mini Program
 miniprogram_npm/
@@ -27,19 +29,38 @@ dist/
 build/
 *.log
 
+# TypeScript 编译产物（保留源码 .ts 文件）
+miniprogram/**/*.js
+miniprogram/**/*.js.map
+backend-nodejs/src/**/*.js
+backend-nodejs/src/**/*.js.map
+# 排除必要的配置文件
+!miniprogram/app.js
+*.tsbuildinfo
+
+# Go 编译产物
+backend-go/main
+backend-go/*.exe
+*.exe
+*.dll
+*.so
+*.dylib
+
+# 部署临时文件
+deploy.zip
+scripts/deploy.zip
+backend-go/deploy.zip
+backend-nodejs/deploy.zip
+
 # Azure
 azure-config.json
 
 # Private config
 project.private.config.json
-project.config.json
 
 # OS
 Thumbs.db
 .DS_Store
-
-# TypeScript
-*.tsbuildinfo
 
 # Docker
 .dockerignore

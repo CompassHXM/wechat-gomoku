@@ -1,369 +1,352 @@
 # 五子棋联机对战 - 快速开始
 
+本项目是一个基于微信小程序的在线五子棋对战游戏，支持实时联机对战、房间管理、WebSocket 实时通信等功能。
+
 ## 📦 项目结构
 
 ```
-wuziqi/
-├── miniprogram/              # 小程序主目录
-│   ├── pages/
-│   │   ├── index/           # 首页（选择游戏模式）
-│   │   ├── lobby/           # 联机大厅（昵称输入、房间列表）
-│   │   ├── game/            # 游戏页面（棋盘）
-│   │   └── logs/            # 日志页面
-│   ├── utils/               # 工具类
-│   │   ├── config.ts        # 配置文件（Azure API地址）
-│   │   ├── api.ts           # API请求工具
-│   │   └── websocket.ts     # WebSocket管理
-│   ├── app.ts               # 小程序入口
-│   └── app.json             # 小程序配置
-├── backend/                  # Azure后端服务（新增）
+wechat-gomoku/
+├── miniprogram/              # 微信小程序前端
+│   ├── pages/               # 页面目录
+│   │   ├── index/          # 首页（模式选择）
+│   │   ├── lobby/          # 联机大厅（房间列表）
+│   │   └── game/           # 游戏页面（棋盘界面）
+│   ├── utils/              # 工具类
+│   │   ├── config.ts       # 配置文件（支持多后端切换）
+│   │   ├── api.ts          # API 请求封装
+│   │   └── websocket.ts    # WebSocket 管理
+│   └── app.ts              # 小程序入口
+│
+├── backend-go/              # Go 后端（推荐 ⭐）
+│   ├── main.go             # 主入口
+│   ├── config/             # 数据库和 PubSub 配置
+│   ├── services/           # 业务逻辑（房间、游戏、清理）
+│   ├── routes/             # API 路由
+│   ├── types/              # 数据类型定义
+│   └── go.mod              # Go 依赖管理
+│
+├── backend-nodejs/          # Node.js 后端（备用）
 │   ├── src/
-│   │   ├── config/          # 数据库和PubSub配置
-│   │   ├── services/        # 业务逻辑
-│   │   ├── routes/          # API路由
-│   │   └── index.ts         # 服务入口
-│   ├── package.json
-│   └── Dockerfile           # Docker配置
-├── cloudfunctions/           # 腾讯云函数（原方案）
-│   └── login/               # 登录云函数（获取openid）
-├── Azure部署指南.md          # Azure云服务部署文档（推荐）
-├── 云开发配置说明.md         # 腾讯云开发配置文档
-└── 云服务方案对比.md         # 两种方案的详细对比
+│   │   ├── config/         # 配置文件
+│   │   ├── services/       # 业务逻辑
+│   │   └── routes/         # API 路由
+│   └── package.json        # npm 依赖管理
+│
+├── docs/                    # 📚 项目文档
+│   ├── deployment/         # 部署相关文档
+│   ├── migration/          # 迁移指南
+│   ├── API_DOCUMENTATION.md
+│   └── DESIGN_DOCUMENT.md
+│
+├── scripts/                 # 🛠️ 工具脚本
+│   ├── deploy-azure-go.ps1 # Go 后端自动部署脚本
+│   ├── test-backend.ps1    # Node.js 后端测试脚本
+│   ├── test-backend-go.ps1 # Go 后端测试脚本
+│   └── database-init.js    # 数据库初始化脚本
+│
+└── typings/                 # TypeScript 类型定义
 ```
 
-## 🎯 云服务方案选择
+## 🎯 后端版本选择
 
-本项目支持两种云服务部署方案：
+### ⭐ Go 版本（推荐）
 
-### 🔵 方案一：Azure云服务（推荐）
+**优势：**
+- ⚡ **性能卓越** - 更快的响应速度，更低的内存占用
+- 🚀 **快速启动** - 秒级启动，冷启动延迟更低
+- 📦 **部署简单** - 编译为单一二进制文件
+- 🔧 **原生并发** - goroutine 提供更好的并发处理
 
-**适合场景：**
-- ✅ 想要学习现代云架构
-- ✅ 需要跨平台支持
-- ✅ 有一定后端开发经验
-- ✅ 想要更强的控制能力
+**部署状态：**
+- ✅ 已部署到 Azure App Service
+- 🌐 API 地址: `https://gomoku-api-go.azurewebsites.net`
 
-**配置时间：** 1-2小时  
-**月成本：** <$5（使用免费层）  
-**查看文档：** [Azure部署指南.md](./Azure部署指南.md)
+**快速部署：**
+```powershell
+cd scripts
+.\deploy-azure-go.ps1 -ConfigureEnv
+```
 
-### 🟢 方案二：腾讯云开发
+**文档：** [docs/deployment/AZURE_DEPLOY_GO.md](docs/deployment/AZURE_DEPLOY_GO.md)
 
-**适合场景：**
+### 🔵 Node.js 版本（备用）
+
+**优势：**
+- 📚 成熟的生态系统
+- 🔄 可作为备份方案
+
+**部署状态：**
+- ✅ 已部署到 Azure App Service
+- 🌐 API 地址: `https://gomoku-app-service-dbdzaug6ejh7e5dx.eastasia-01.azurewebsites.net`
+
+**文档：** [docs/deployment/Azure部署指南.md](docs/deployment/Azure部署指南.md)
+
+### 🔄 后端切换
+
+前端配置支持快速切换后端，编辑 [`miniprogram/utils/config.ts`](miniprogram/utils/config.ts)：
+
+```typescript
+// 修改这一行来切换后端
+const CURRENT_BACKEND: keyof typeof BACKEND_CONFIGS = 'go'; // 'go' 或 'nodejs'
+```
+
+## 🚀 快速开始
 - ✅ 只做微信小程序
 - ✅ 想要快速上线
 - ✅ 不熟悉后端开发
 - ✅ 小规模项目
 
 **配置时间：** 15-30分钟  
-**月成本：** ¥10-30  
-**查看文档：** [云开发配置说明.md](./云开发配置说明.md)
 
-**详细对比：** [云服务方案对比.md](./云服务方案对比.md)
+## 🚀 快速开始
 
----
+### 1️⃣ 克隆项目
 
-## 🚀 快速开始（5分钟）
-
-### 方式一：仅使用本地对战（无需配置）
-
-1. 用微信开发者工具打开项目
-2. 点击"本地对战"按钮
-3. 两人在同一设备上轮流下棋
-
-### 方式二：配置联机对战
-
-#### A. 使用Azure云服务（推荐）
-
-完整步骤请查看：**[Azure部署指南.md](./Azure部署指南.md)**
-
-**快速步骤概览：**
-1. 创建Azure Cosmos DB（数据库）
-2. 创建Azure Web PubSub（实时通信）
-3. 部署后端服务到Azure App Service
-4. 修改小程序配置文件
-5. 配置小程序服务器域名
-
-#### B. 使用腾讯云开发
-
-完整步骤请查看：**[云开发配置说明.md](./云开发配置说明.md)**
-
-#### 第一步：开通云开发（1分钟）
-
-1. 在微信开发者工具中点击顶部"云开发"按钮
-2. 按提示开通云开发（需要实名认证）
-3. 创建环境，记下环境ID（如：cloud1-xxx）
-
-#### 第二步：配置环境ID（30秒）
-
-修改 `miniprogram/app.ts` 第6行：
-
-```typescript
-wx.cloud.init({
-  traceUser: true,
-  env: 'cloud1-xxx' // 替换为你的实际环境ID
-})
+```bash
+git clone https://github.com/your-username/wechat-gomoku.git
+cd wechat-gomoku
 ```
 
-#### 第三步：创建数据库集合（1分钟）
+### 2️⃣ 安装依赖
 
-1. 在云开发控制台，点击"数据库"
-2. 点击"添加集合"
-3. 集合名：`game_rooms`
-4. 权限：所有用户可读、所有用户可写
-5. 点击确定
+```bash
+# 安装根目录依赖（TypeScript 编译）
+npm install
 
-可选：添加索引提高性能
-- 索引1：status（升序）
-- 索引2：createTime（降序）
+# 编译 TypeScript 代码
+npm run build
 
-#### 第四步：部署云函数（1分钟）
+# 或使用监听模式
+npm run watch
+```
 
-1. 在开发者工具左侧，展开 `cloudfunctions` 目录
-2. 右键点击 `login` 文件夹
-3. 选择"上传并部署：云端安装依赖"
-4. 等待部署完成（显示绿色对勾）
+### 3️⃣ 配置后端
 
-#### 第五步：测试联机功能（1分钟）
+#### 方式 A：使用已部署的 Go 后端（推荐）
 
-1. 编译运行小程序
-2. 点击"联机对战"
-3. 输入昵称（如：玩家1）
-4. 点击"创建房间"
-5. 打开第二个模拟器（或真机），重复2-3步
-6. 点击房间列表中的房间，加入游戏
-7. 开始对战！🎉
+前端配置已默认指向 Go 后端，无需额外配置即可使用。
+
+#### 方式 B：部署自己的后端
+
+**Go 后端部署：**
+```powershell
+cd scripts
+.\deploy-azure-go.ps1 -ConfigureEnv
+```
+
+**Node.js 后端部署：**
+查看 [docs/deployment/Azure部署指南.md](docs/deployment/Azure部署指南.md)
+
+### 4️⃣ 配置小程序
+
+1. 使用微信开发者工具打开 `miniprogram` 目录
+2. 配置 AppID（或使用测试号）
+3. 在**详情 > 本地设置**中勾选：
+   - ☑️ 不校验合法域名
+   - ☑️ 启用调试模式
+
+### 5️⃣ 运行测试
+
+**测试后端 API：**
+```powershell
+# 测试 Go 后端
+cd scripts
+.\test-backend-go.ps1
+
+# 测试 Node.js 后端
+.\test-backend.ps1
+```
+
+**运行小程序：**
+点击微信开发者工具的"编译"按钮，开始体验游戏！
 
 ---
 
 ## 🎮 功能特点
 
-### 双模式支持
-- **本地对战**：无需网络，两人同一设备轮流下棋
-- **联机对战**：实时对战，支持旁观
+### 🎯 双模式支持
+- **本地对战** - 无需网络，两人同设备轮流下棋
+- **联机对战** - 实时在线对战，支持房间系统
 
-### 联机对战特性
-✅ 实时同步：延迟<500ms  
-✅ 自动匹配：创建/加入房间  
-✅ 玩家昵称：自定义显示  
-✅ 黑白分配：先进先黑（先手）  
-✅ 旁观模式：房间满员后可旁观  
-✅ 权限控制：轮到自己才能下棋  
-✅ 胜负判定：五子连珠自动判定  
+### ⚡ 联机对战特性
+- ✅ **实时同步** - WebSocket 实时通信，延迟 < 500ms
+- ✅ **房间系统** - 创建/加入/查找房间
+- ✅ **玩家昵称** - 自定义显示名称
+- ✅ **自动分配** - 先进房间者执黑（先手）
+- ✅ **旁观模式** - 房间满员后可旁观
+- ✅ **权限控制** - 轮到自己才能下棋
+- ✅ **胜负判定** - 五子连珠自动判定
+- ✅ **自动清理** - 无活动房间自动回收
 
-### 游戏规则
+### 🎲 游戏规则
 - 15×15 标准棋盘
 - 黑方先手
 - 先连成五子者获胜
+- 横、竖、斜四个方向均可
 - 棋盘下满无胜者为平局
+
+---
+
+## 📚 文档导航
+
+### 核心文档
+- 📖 [API 接口文档](docs/API_DOCUMENTATION.md)
+- 🏗️ [系统设计文档](docs/DESIGN_DOCUMENT.md)
+- 📚 [文档索引](docs/README.md)
+
+### 部署指南
+- 🚀 [Azure 部署指南](docs/deployment/Azure部署指南.md)
+- ⭐ [Go 后端部署](docs/deployment/AZURE_DEPLOY_GO.md)
+- 🔧 [部署问题修复](docs/deployment/DEPLOYMENT_FIXES.md)
+
+### 迁移文档
+- 🔄 [TypeScript 到 Go 迁移指南](docs/migration/MIGRATION_TO_GO.md)
+
+### 其他
+- ☁️ [云服务方案对比](docs/云服务方案对比.md)
+- 📝 [云开发配置说明](docs/云开发配置说明.md)（已停用）
 
 ---
 
 ## 🛠️ 技术栈
 
-### 前端
-- **框架**：微信小程序原生开发
-- **UI**：Canvas 2D API（新版）
-- **TypeScript**：类型安全
+### 前端（微信小程序）
+- **语言**: TypeScript
+- **框架**: 微信小程序原生框架
+- **实时通信**: WebSocket
+- **构建**: 微信开发者工具
 
-### 后端（Azure方案）
-- **API服务**：Node.js + Express
-- **数据库**：Azure Cosmos DB
-- **实时通信**：Azure Web PubSub
-- **部署**：Azure App Service
+### 后端 - Go 版本（推荐）
+- **语言**: Go 1.21
+- **框架**: Gin Web Framework
+- **数据库**: Azure Cosmos DB (NoSQL)
+- **实时通信**: Azure Web PubSub (WebSocket)
+- **部署**: Azure App Service (Linux)
 
-### 后端（腾讯云开发方案）
-- **云数据库**：存储房间信息
-- **云函数**：获取用户openid
-- **实时推送**：watch API
+### 后端 - Node.js 版本
+- **语言**: TypeScript / Node.js 18
+- **框架**: Express.js
+- **数据库**: Azure Cosmos DB (NoSQL)
+- **实时通信**: Azure Web PubSub (WebSocket)
+- **部署**: Azure App Service (Linux)
+
+### 基础设施
+- **云平台**: Microsoft Azure
+- **数据库**: Cosmos DB（分区键: /status）
+- **实时通信**: Web PubSub Service
+- **容器化**: Docker
+- **CI/CD**: PowerShell 自动化脚本
+
+---
+
+## 🧪 API 测试
+
+### 健康检查
+```bash
+# Go 后端
+curl https://gomoku-api-go.azurewebsites.net/api/health
+
+# Node.js 后端  
+curl https://gomoku-app-service-dbdzaug6ejh7e5dx.eastasia-01.azurewebsites.net/api/health
+```
+
+### 使用测试脚本
+```powershell
+# 测试 Go 后端（推荐）
+cd scripts
+.\test-backend-go.ps1
+
+# 测试 Node.js 后端
+.\test-backend.ps1
+```
 
 ---
 
 ## 📱 测试建议
 
 ### 联机功能测试
-1. **方法一**：使用两个微信开发者工具
-   - 打开两个开发者工具实例
-   - 同时运行项目
-
-2. **方法二**：开发者工具 + 真机
-   - 在开发者工具中创建房间
-   - 用手机扫码预览并加入
-
-3. **方法三**：两台真机
-   - 扫码在两台手机上预览
-   - 更真实的测试体验
+1. **两个开发者工具** - 打开两个实例同时运行
+2. **开发者工具 + 真机** - 创建房间后手机扫码加入
+3. **两台真机** - 最真实的测试体验
 
 ### 旁观功能测试
-- 让三个或更多用户加入同一房间
-- 前两个成为玩家，后续成为旁观者
+让三个或更多用户加入同一房间，前两个成为玩家，后续成为旁观者
 
 ---
 
 ## 🐛 常见问题
 
-### Azure方案常见问题
-见 [Azure部署指南.md](./Azure部署指南.md) 的"常见问题"章节
-
-### 腾讯云开发常见问题
-
-1. 在微信开发者工具中点击顶部"云开发"按钮
-2. 按提示开通云开发（需要实名认证）
-3. 创建环境，记下环境ID（如：cloud1-xxx）
-
-#### 第二步：配置环境ID（30秒）
-
-修改 `miniprogram/app.ts` 第6行：
-
+### Q: 如何切换后端？
+**A:** 编辑 `miniprogram/utils/config.ts`，修改 `CURRENT_BACKEND`：
 ```typescript
-wx.cloud.init({
-  traceUser: true,
-  env: 'cloud1-xxx' // 替换为你的实际环境ID
-})
+const CURRENT_BACKEND = 'go'; // 'go' 或 'nodejs'
 ```
 
-#### 第三步：创建数据库集合（1分钟）
+### Q: TypeScript 修改后没生效？
+**A:** 编译 TypeScript 代码：
+```bash
+npm run build     # 或
+npm run watch     # 监听模式
+```
 
-1. 在云开发控制台，点击"数据库"
-2. 点击"添加集合"
-3. 集合名：`game_rooms`
-4. 权限：所有用户可读、所有用户可写
-5. 点击确定
+### Q: 部署失败怎么办？
+**A:** 查看文档：
+- [DEPLOYMENT_FIXES.md](docs/deployment/DEPLOYMENT_FIXES.md)
+- [Azure部署指南.md](docs/deployment/Azure部署指南.md)
 
-可选：添加索引提高性能
-- 索引1：status（升序）
-- 索引2：createTime（降序）
+### Q: 前端连接不上后端？
+**A:** 检查：
+1. 后端服务正常（访问 `/api/health`）
+2. `config.ts` 中的 API 地址
+3. 开发者工具中勾选"不校验合法域名"
+4. 控制台错误信息
 
-#### 第四步：部署云函数（1分钟）
+---
 
-1. 在开发者工具左侧，展开 `cloudfunctions` 目录
-2. 右键点击 `login` 文件夹
-3. 选择"上传并部署：云端安装依赖"
-4. 等待部署完成（显示绿色对勾）
+## 🤝 贡献指南
 
-#### 第五步：测试联机功能（1分钟）
+欢迎提交 Issue 和 Pull Request！
 
-1. 编译运行小程序
-2. 点击"联机对战"
-3. 输入昵称（如：玩家1）
-4. 点击"创建房间"
-5. 打开第二个模拟器（或真机），重复2-3步
-6. 点击房间列表中的房间，加入游戏
-7. 开始对战！🎉
+### 开发流程
+1. Fork 本仓库
+2. 创建特性分支 (`git checkout -b feature/AmazingFeature`)
+3. 提交更改 (`git commit -m 'Add AmazingFeature'`)
+4. 推送到分支 (`git push origin feature/AmazingFeature`)
+5. 提交 Pull Request
 
-## 🎮 功能特点
+### 代码规范
+- TypeScript 使用 ESLint
+- Go 使用 `gofmt` 和 `golint`
+- 提交信息遵循 Conventional Commits
 
-### 双模式支持
-- **本地对战**：无需网络，两人同一设备轮流下棋
-- **联机对战**：实时对战，支持旁观
+---
 
-### 联机对战特性
-✅ 实时同步：使用云数据库 watch API，延迟<500ms
-✅ 自动匹配：创建/加入房间
-✅ 玩家昵称：自定义显示
-✅ 黑白分配：先进先黑（先手）
-✅ 旁观模式：房间满员后可旁观
-✅ 权限控制：轮到自己才能下棋
-✅ 胜负判定：五子连珠自动判定
-
-### 游戏规则
-- 15×15 标准棋盘
-- 黑方先手
-- 先连成五子者获胜
-- 棋盘下满无胜者为平局
-
-## 🛠️ 技术栈
-
-- **前端**：微信小程序原生开发
-- **UI**：Canvas 2D API（新版）
-- **后端**：微信云开发
-  - 云数据库（存储房间信息）
-  - 云函数（获取用户openid）
-  - 实时数据推送（watch API）
-
-## 📱 测试建议
-
-### 联机功能测试
-1. **方法一**：使用两个微信开发者工具
-   - 打开两个开发者工具实例
-   - 同时运行项目
-
-2. **方法二**：开发者工具 + 真机
-   - 在开发者工具中创建房间
-   - 用手机扫码预览并加入
-
-3. **方法三**：两台真机
-   - 扫码在两台手机上预览
-   - 更真实的测试体验
-
-### 旁观功能测试
-- 让三个或更多用户加入同一房间
-- 前两个成为玩家，后续成为旁观者
-
-## �️ 开发指南
-
-### TypeScript 编译注意事项
-
-本项目使用 TypeScript 开发。修改 `miniprogram` 或 `backend` 目录下的 `.ts` 文件后，**必须**进行编译才能生效。
-
-**编译命令：**
-
-1. **小程序端 (miniprogram)**
-   在项目根目录下运行：
-   ```bash
-   npx tsc
-   ```
-   这会将 `miniprogram/**/*.ts` 编译为对应的 `.js` 文件。微信开发者工具实际运行的是 `.js` 文件。
-   *建议：在开发过程中开启 `tsc -w` 监听文件变化自动编译。*
-
-2. **后端 (backend)**
-   在 `backend` 目录下运行：
-   ```bash
-   npm run build
-   ```
-   或者在开发模式下使用：
-   ```bash
-   npm run dev
-   ```
-
-## �🐛 常见问题
-
-### Q1: 点击"联机对战"后提示云开发错误
-**A**: 检查是否已开通云开发并配置了正确的环境ID
-
-### Q2: 创建房间失败
-**A**: 检查数据库集合 `game_rooms` 是否已创建，权限是否设置正确
-
-### Q3: 加入房间后看不到对方下棋
-**A**: 检查云函数 `login` 是否已部署，网络是否正常
-
-### Q4: 提示"请使用2.2.3或以上基础库"
-**A**: 在项目设置中提高基础库版本到 2.2.3 以上
-
-### Q5: 真机预览时无法联机
-**A**: 
-- 确保云函数已部署
-- 检查小程序 AppID 是否正确
-- 在"详情-本地设置"中勾选"不校验合法域名"（开发阶段）
-
-## 📞 技术支持
-
-遇到问题可以：
-1. 查看 `云开发配置说明.md` 了解详细配置
-2. 在微信开发者社区搜索相关问题
-3. 查看云开发官方文档
-
-## 🎯 后续优化建议
+## 🎯 功能规划
 
 - [ ] 添加聊天功能
 - [ ] 房间密码保护
-- [ ] 游戏回放
-- [ ] 排行榜系统
+- [ ] 游戏回放系统
+- [ ] 排行榜
 - [ ] AI 对战模式
 - [ ] 自定义棋盘大小
-- [ ] 禁手规则（如五手N打）
+- [ ] 禁手规则支持
 - [ ] 计时功能
 
 ---
 
-祝游戏愉快！🎮
+## 📄 许可证
+
+MIT License - 详见 [LICENSE](LICENSE)
+
+---
+
+## 🙏 致谢
+
+- 微信小程序平台
+- Microsoft Azure
+- Go 语言社区
+- TypeScript 社区
+
+---
+
+**⭐ 如果这个项目对你有帮助，请给个 Star 支持一下！**
