@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"strings"
 
 	"github.com/Azure/azure-sdk-for-go/sdk/data/azcosmos"
 )
@@ -56,8 +57,16 @@ func InitDatabase(ctx context.Context) error {
 	databaseProperties := azcosmos.DatabaseProperties{ID: databaseID}
 	_, err = client.CreateDatabase(ctx, databaseProperties, nil)
 	if err != nil {
-		// 如果数据库已存在，忽略错误（这是正常情况）
-		log.Printf("Database initialization: %s (this is normal if database already exists)", databaseID)
+		// 检查是否是数据库已存在的错误（包含 "Conflict" 或 "already exists"）
+		errMsg := err.Error()
+		if strings.Contains(errMsg, "Conflict") && strings.Contains(errMsg, "already exists") {
+			log.Printf("Database '%s' already exists (this is normal)", databaseID)
+		} else {
+			// 其他错误需要记录完整信息
+			log.Printf("Warning: Database creation error: %v", err)
+		}
+	} else {
+		log.Printf("Database '%s' created successfully", databaseID)
 	}
 
 	// 获取容器客户端
