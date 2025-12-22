@@ -101,7 +101,10 @@ if (-not $webapp) {
 # 构建 Go 应用
 Write-Host "`n构建 Go 应用..." -ForegroundColor Yellow
 $originalLocation = Get-Location
-# 脚本已经在 backend-go 目录中，不需要切换
+$backendGoPath = Join-Path $originalLocation "backend-go"
+
+# 切换到 backend-go 目录
+Set-Location $backendGoPath
 
 Write-Host "设置环境变量..." -ForegroundColor Yellow
 $env:GOOS = "linux"
